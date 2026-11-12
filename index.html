@@ -149,6 +149,24 @@
     </div>
 
     <script>
+        // ==========================================
+        // 1. 全局状态定义（必须提前，防止 TDZ 报错）
+        // ==========================================
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const singleView = document.getElementById('single-view');
+        const batchView = document.getElementById('batch-view');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        
+        let currentFileName = 'image';
+        let originalImageObj = null;
+        let originalSize = 0;
+        let batchFiles = []; // 批量文件队列
+
+        // ==========================================
+        // 2. 国际化字典 (i18n)
+        // ==========================================
         const i18n = {
             zh: {
                 title: "LSFP 全能转换中心", subtitle: "由了了了岭工作室提供技术支持",
@@ -185,12 +203,12 @@
                 if (i18n[lang][key]) el.innerText = i18n[lang][key];
             });
 
-            // 刷新动态按钮
-            if (document.getElementById('single-view').style.display === 'flex') setupSingleToolbar();
+            if (singleView.style.display === 'flex') setupSingleToolbar();
             updateBatchUI();
         }
         function t(key) { return i18n[currentLang][key] || key; }
 
+        // 初始化语言
         const savedLang = localStorage.getItem('lsfp-lang');
         const browserLang = navigator.language.toLowerCase();
         if (savedLang && i18n[savedLang]) setLanguage(savedLang);
@@ -202,20 +220,9 @@
             setLanguage(e.target.value);
         });
 
-        // 全局状态
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('file-input');
-        const singleView = document.getElementById('single-view');
-        const batchView = document.getElementById('batch-view');
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        
-        let currentFileName = 'image';
-        let originalImageObj = null;
-        let originalSize = 0;
-        let batchFiles = []; // 批量文件队列
-
-        // 拖拽 & 点击事件
+        // ==========================================
+        // 3. 交互事件绑定
+        // ==========================================
         dropZone.addEventListener('click', (e) => { 
             if (!dropZone.classList.contains('has-image') && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') fileInput.click(); 
         });
@@ -229,7 +236,6 @@
             if (e.target.files.length > 0) handleFiles(e.target.files);
         });
 
-        // 核心处理入口：判断是单图还是多图
         async function handleFiles(files) {
             if (files.length === 1 && !files[0].name.toLowerCase().endsWith('.lsfp')) {
                 handleSingleFile(files[0]);
@@ -239,7 +245,7 @@
         }
 
         // ==========================================
-        // 模式一：单图处理 (缩放 / 导出各种格式)
+        // 4. 单图处理
         // ==========================================
         function handleSingleFile(file) {
             currentFileName = file.name.split('.').slice(0, -1).join('.') || 'image';
@@ -333,7 +339,7 @@
         }
 
         // ==========================================
-        // 模式二：多图批量处理 (队列式独立下载)
+        // 5. 批量处理
         // ==========================================
         async function handleBatchFiles(files) {
             dropZone.classList.add('has-image');
@@ -343,7 +349,6 @@
             singleView.style.display = 'none';
             batchView.style.display = 'flex';
             
-            // 如果当前列表空了，初始化一下
             for (let file of files) {
                 const isLsfp = file.name.toLowerCase().endsWith('.lsfp');
                 if (!file.type.startsWith('image/') && !isLsfp) continue;
@@ -359,7 +364,9 @@
         }
 
         function updateBatchUI() {
-            document.getElementById('batch-count').innerText = batchFiles.length;
+            const countEl = document.getElementById('batch-count');
+            if(!countEl) return; // 防止未加载完DOM时报错
+            countEl.innerText = batchFiles.length;
             const list = document.getElementById('batch-list');
             list.innerHTML = '';
             
@@ -401,21 +408,18 @@
         }
 
         async function processBatchQueue() {
-            // 找到第一个等待中的文件
             const item = batchFiles.find(f => f.status === 'waiting');
-            if (!item) return; // 全部处理完了
+            if (!item) return; 
 
             item.status = 'converting';
             updateBatchUI();
 
             try {
-                // 如果是 LSFP 文件，跳过转码（或者以后可以加互转逻辑）
                 if (item.name.toLowerCase().endsWith('.lsfp')) {
                     item.status = 'done';
                     item.blob = item.file;
                     item.lsfpSize = item.originalSize;
                 } else {
-                    // 读取图片画到临时 Canvas
                     await new Promise((resolve, reject) => {
                         const img = new Image();
                         img.onload = async () => {
@@ -425,7 +429,6 @@
                             tempCtx.drawImage(img, 0, 0);
                             const imgData = tempCtx.getImageData(0, 0, img.width, img.height);
                             
-                            // 调用我们的独立库！
                             item.blob = await LSFP.encode(imgData);
                             item.lsfpSize = item.blob.size;
                             item.status = 'done';
@@ -441,7 +444,6 @@
             }
 
             updateBatchUI();
-            // 稍作停顿后，处理下一个
             setTimeout(processBatchQueue, 10);
         }
 
@@ -457,7 +459,6 @@
             const completed = batchFiles.filter(f => f.status === 'done');
             if (completed.length === 0) return alert(t('noFilesToDownload'));
             
-            // 逐个触发下载，间隔 300ms 防止浏览器拦截弹窗
             completed.forEach((item, index) => {
                 setTimeout(() => {
                     const newName = item.name.replace(/\.[^/.]+$/, "") + ".lsfp";
@@ -478,7 +479,6 @@
             fileInput.value = '';
         }
 
-        // 通用下载方法
         function downloadBlob(blob, filename) {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a'); a.href = url; a.download = filename;
