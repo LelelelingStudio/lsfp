@@ -42,14 +42,20 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.3); position: relative; padding: 40px 0;
         }
         #drop-zone.dragover { border-color: #4CAF50; background: #252525; transform: scale(1.02); }
-        #drop-zone.has-image { border: none; background: transparent; box-shadow: none; padding: 0; }
+        #drop-zone.has-image { border: none; background: transparent; box-shadow: none; padding: 0; cursor: default;}
         
         .icon { font-size: 48px; margin-bottom: 15px; }
         .formats-text { font-size: 12px; color: #666; margin-top: 10px; max-width: 80%; text-align: center; }
         
         /* 单图模式 */
         #single-view { display: none; flex-direction: column; align-items: center; width: 100%; }
-        canvas { display: none; max-width: 85vw; max-height: 50vh; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); background: #fff; object-fit: contain; }
+        
+        .view-header {
+            width: 85vw; max-width: 800px; display: flex; justify-content: space-between; 
+            align-items: center; margin-bottom: 15px;
+        }
+
+        canvas { display: none; max-width: 85vw; max-height: 50vh; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); background: #fff; object-fit: contain; cursor: pointer; }
         
         #controls {
             margin-top: 20px; display: none; flex-direction: column; gap: 15px; width: 85vw; max-width: 800px;
@@ -111,7 +117,11 @@
         
         <!-- 单图视图 -->
         <div id="single-view">
-            <canvas id="canvas"></canvas>
+            <div class="view-header">
+                <button onclick="resetApp()" data-i18n="uploadNew">⬅️ 重新上传</button>
+                <div style="font-size: 12px; color: #aaa;">点击图片也可重新上传</div>
+            </div>
+            <canvas id="canvas" onclick="resetApp()"></canvas>
             <div id="stats">
                 <div class="stat-item"><span data-i18n="origSize">原图大小</span>: <span id="orig-size">-</span></div>
                 <div class="stat-item"><span data-i18n="currentDim">当前尺寸</span>: <span id="current-dim">-</span></div>
@@ -124,7 +134,7 @@
                     <label data-i18n="resizeH">高度:</label>
                     <input type="number" id="resize-h" placeholder="H">
                     <button onclick="applyResize()" data-i18n="applyResize">应用缩放</button>
-                    <button onclick="resetImage()" data-i18n="resetImage">重置</button>
+                    <button onclick="resetImage()" data-i18n="resetImage">重置尺寸</button>
                 </div>
                 <div class="control-row">
                     <label data-i18n="quality">导出质量 (JPG/WebP):</label>
@@ -142,7 +152,7 @@
             <div style="font-weight: bold;"><span data-i18n="batchMode">批量转换模式</span> (<span id="batch-count">0</span>)</div>
             <div style="display: flex; gap: 10px;">
                 <button onclick="downloadAllBatch()" class="primary" id="btn-download-all" data-i18n="downloadAll">一键下载全部</button>
-                <button onclick="resetApp()" data-i18n="clearAll">清空列表</button>
+                <button onclick="resetApp()" data-i18n="uploadNew">⬅️ 重新上传</button>
             </div>
         </div>
         <div class="batch-list" id="batch-list"></div>
@@ -173,10 +183,10 @@
                 dropText: "点击或拖拽图片到此处 (支持多选)", formatsText: "支持 PNG, JPG, WebP, BMP, GIF, SVG, ICO, AVIF, TIFF 及 LSFP",
                 installBanner: "📲 安装 LSFP 到桌面体验更好",
                 origSize: "原图大小", currentDim: "当前尺寸", lsfpSize: "LSFP 压缩后",
-                resizeW: "缩放宽度(px):", resizeH: "高度:", applyResize: "应用缩放", resetImage: "重置",
+                resizeW: "缩放宽度(px):", resizeH: "高度:", applyResize: "应用缩放", resetImage: "重置尺寸",
                 quality: "导出质量 (JPG/WebP):", downloadAs: "下载为", downloadLsfp: "✨ 下载为 LSFP", 
                 compressing: "⏳ 正在压缩...", errorParse: "解析失败", errorFormat: "不支持的文件格式！", errorConvert: "转换失败",
-                batchMode: "批量转换模式", downloadAll: "一键下载全部", clearAll: "清空列表", 
+                batchMode: "批量转换模式", downloadAll: "一键下载全部", uploadNew: "⬅️ 重新上传", 
                 statusWait: "等待中", statusConverting: "转换中...", statusDone: "转换完成", download: "下载 LSFP", noFilesToDownload: "还没有转换完成的文件"
             },
             en: {
@@ -187,7 +197,7 @@
                 resizeW: "Resize Width(px):", resizeH: "Height:", applyResize: "Apply", resetImage: "Reset",
                 quality: "Export Quality (JPG/WebP):", downloadAs: "Download as", downloadLsfp: "✨ Download as LSFP",
                 compressing: "⏳ Compressing...", errorParse: "Parse failed", errorFormat: "Unsupported format!", errorConvert: "Conversion failed",
-                batchMode: "Batch Mode", downloadAll: "Download All", clearAll: "Clear All",
+                batchMode: "Batch Mode", downloadAll: "Download All", uploadNew: "⬅️ Upload New",
                 statusWait: "Waiting", statusConverting: "Converting...", statusDone: "Done", download: "Download LSFP", noFilesToDownload: "No converted files to download"
             }
         };
@@ -203,7 +213,7 @@
                 if (i18n[lang][key]) el.innerText = i18n[lang][key];
             });
 
-            if (singleView.style.display === 'flex') setupSingleToolbar();
+            if (singleView.style.display === 'flex') setupSingleToolbar(!originalImageObj);
             updateBatchUI();
         }
         function t(key) { return i18n[currentLang][key] || key; }
@@ -224,7 +234,10 @@
         // 3. 交互事件绑定
         // ==========================================
         dropZone.addEventListener('click', (e) => { 
-            if (!dropZone.classList.contains('has-image') && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') fileInput.click(); 
+            // 如果点击的不是按钮、输入框或图片，并且还在初始状态，就触发上传
+            if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'CANVAS') {
+                if (!dropZone.classList.contains('has-image')) fileInput.click(); 
+            }
         });
         dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
         dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
@@ -236,49 +249,77 @@
             if (e.target.files.length > 0) handleFiles(e.target.files);
         });
 
+        // 核心分流器
         async function handleFiles(files) {
-            if (files.length === 1 && !files[0].name.toLowerCase().endsWith('.lsfp')) {
-                handleSingleFile(files[0]);
+            if (files.length === 1) {
+                handleSingleFile(files[0]); // 单文件统统进预览
             } else {
-                handleBatchFiles(files);
+                handleBatchFiles(files);    // 多文件进批量
             }
         }
 
         // ==========================================
-        // 4. 单图处理
+        // 4. 单图处理（支持普通图 + LSFP解码）
         // ==========================================
         function handleSingleFile(file) {
             currentFileName = file.name.split('.').slice(0, -1).join('.') || 'image';
             originalSize = file.size;
+            const isLsfp = file.name.toLowerCase().endsWith('.lsfp');
             
+            // 切换UI显示
             batchView.style.display = 'none';
             singleView.style.display = 'flex';
             dropZone.classList.add('has-image');
             document.querySelector('.icon').style.display = 'none';
             document.getElementById('drop-text').style.display = 'none';
             document.querySelector('.formats-text').style.display = 'none';
+            document.getElementById('controls').style.display = "flex";
 
-            const img = new Image();
-            img.onload = () => {
-                originalImageObj = img;
-                canvas.width = img.width; canvas.height = img.height;
-                ctx.drawImage(img, 0, 0);
-                canvas.style.display = "block";
-                document.getElementById('controls').style.display = "flex";
-                document.getElementById('stats').style.display = "flex";
-                updateSingleStats();
-                setupSingleToolbar();
-            };
-            img.src = URL.createObjectURL(file);
+            if (isLsfp) {
+                // 处理 LSFP 预览
+                originalImageObj = null; // LSFP 文件无法进行基于原图的缩放计算，暂时设为null
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    try {
+                        const imgData = await LSFP.decode(e.target.result);
+                        canvas.width = imgData.width;
+                        canvas.height = imgData.height;
+                        ctx.putImageData(imgData, 0, 0);
+                        
+                        canvas.style.display = "block";
+                        document.getElementById('stats').style.display = "flex";
+                        updateSingleStats();
+                        setupSingleToolbar(true); // true表示这是LSFP输入
+                    } catch (err) {
+                        alert(t('errorParse') + ": " + err.message);
+                        resetApp();
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                // 处理普通图片
+                const img = new Image();
+                img.onload = () => {
+                    originalImageObj = img;
+                    canvas.width = img.width; canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    canvas.style.display = "block";
+                    document.getElementById('stats').style.display = "flex";
+                    updateSingleStats();
+                    setupSingleToolbar(false);
+                };
+                img.src = URL.createObjectURL(file);
+            }
         }
 
         function updateSingleStats() {
             document.getElementById('orig-size').innerText = (originalSize / 1024).toFixed(1) + ' KB';
             document.getElementById('current-dim').innerText = `${canvas.width} x ${canvas.height}`;
+            document.getElementById('lsfp-stat').style.display = "none"; // 每次重置状态
         }
 
         function applyResize() {
-            if (!originalImageObj) return;
+            if (!originalImageObj) return alert("LSFP文件无法在此处缩放，请使用图像处理软件。");
             const w = parseInt(document.getElementById('resize-w').value);
             const h = parseInt(document.getElementById('resize-h').value);
             if (w > 0 && h > 0) {
@@ -300,7 +341,8 @@
             updateSingleStats();
         }
 
-        function setupSingleToolbar() {
+        // isLsfpInput: 如果当前加载的是LSFP，就不显示"转为LSFP"的按钮了
+        function setupSingleToolbar(isLsfpInput) {
             const toolbar = document.getElementById('toolbar');
             toolbar.innerHTML = '';
             const formats = [
@@ -319,23 +361,25 @@
                 toolbar.appendChild(btn);
             });
 
-            const btnLSFP = document.createElement('button');
-            btnLSFP.className = 'primary';
-            btnLSFP.innerText = t('downloadLsfp');
-            btnLSFP.onclick = async () => {
-                btnLSFP.innerText = t('compressing');
-                try {
-                    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    const blob = await LSFP.encode(imgData);
-                    downloadBlob(blob, `${currentFileName}.lsfp`);
-                    
-                    document.getElementById('lsfp-stat').style.display = 'block';
-                    document.getElementById('lsfp-size').innerText = (blob.size / 1024).toFixed(1) + ' KB';
-                    document.getElementById('lsfp-size').style.color = blob.size < originalSize ? '#4CAF50' : '#ff5252';
-                } catch (e) { alert(t('errorConvert')); }
+            if (!isLsfpInput) {
+                const btnLSFP = document.createElement('button');
+                btnLSFP.className = 'primary';
                 btnLSFP.innerText = t('downloadLsfp');
-            };
-            toolbar.appendChild(btnLSFP);
+                btnLSFP.onclick = async () => {
+                    btnLSFP.innerText = t('compressing');
+                    try {
+                        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const blob = await LSFP.encode(imgData);
+                        downloadBlob(blob, `${currentFileName}.lsfp`);
+                        
+                        document.getElementById('lsfp-stat').style.display = 'block';
+                        document.getElementById('lsfp-size').innerText = (blob.size / 1024).toFixed(1) + ' KB';
+                        document.getElementById('lsfp-size').style.color = blob.size < originalSize ? '#4CAF50' : '#ff5252';
+                    } catch (e) { alert(t('errorConvert')); }
+                    btnLSFP.innerText = t('downloadLsfp');
+                };
+                toolbar.appendChild(btnLSFP);
+            }
         }
 
         // ==========================================
@@ -356,7 +400,8 @@
                 const id = 'batch_' + Math.random().toString(36).substr(2, 9);
                 batchFiles.push({
                     id: id, file: file, status: 'waiting', 
-                    originalSize: file.size, blob: null, lsfpSize: 0, name: file.name
+                    originalSize: file.size, blob: null, lsfpSize: 0, name: file.name,
+                    isLsfp: isLsfp
                 });
             }
             updateBatchUI();
@@ -365,7 +410,7 @@
 
         function updateBatchUI() {
             const countEl = document.getElementById('batch-count');
-            if(!countEl) return; // 防止未加载完DOM时报错
+            if(!countEl) return; 
             countEl.innerText = batchFiles.length;
             const list = document.getElementById('batch-list');
             list.innerHTML = '';
@@ -415,7 +460,7 @@
             updateBatchUI();
 
             try {
-                if (item.name.toLowerCase().endsWith('.lsfp')) {
+                if (item.isLsfp) {
                     item.status = 'done';
                     item.blob = item.file;
                     item.lsfpSize = item.originalSize;
@@ -450,7 +495,7 @@
         function downloadBatchItem(id) {
             const item = batchFiles.find(f => f.id === id);
             if (item && item.blob) {
-                const newName = item.name.replace(/\.[^/.]+$/, "") + ".lsfp";
+                const newName = item.isLsfp ? item.name : item.name.replace(/\.[^/.]+$/, "") + ".lsfp";
                 downloadBlob(item.blob, newName);
             }
         }
@@ -461,7 +506,7 @@
             
             completed.forEach((item, index) => {
                 setTimeout(() => {
-                    const newName = item.name.replace(/\.[^/.]+$/, "") + ".lsfp";
+                    const newName = item.isLsfp ? item.name : item.name.replace(/\.[^/.]+$/, "") + ".lsfp";
                     downloadBlob(item.blob, newName);
                 }, index * 300);
             });
@@ -476,7 +521,17 @@
             document.querySelector('.formats-text').style.display = 'block';
             batchView.style.display = 'none';
             singleView.style.display = 'none';
+            canvas.style.display = 'none';
+            document.getElementById('controls').style.display = 'none';
+            document.getElementById('stats').style.display = 'none';
+            document.getElementById('lsfp-stat').style.display = 'none';
             fileInput.value = '';
+            
+            // 清空画布内存
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            originalImageObj = null;
+            originalSize = 0;
+            currentFileName = 'image';
         }
 
         function downloadBlob(blob, filename) {
