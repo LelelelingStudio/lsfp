@@ -78,14 +78,21 @@
         .batch-stats { font-size: 12px; color: #888; }
         .batch-stats span.success { color: #4CAF50; font-weight: bold; }
         
+        /* 按钮和下拉框 */
         button {
             background: #333; color: white; border: 1px solid #555; padding: 8px 16px; 
             border-radius: 8px; font-size: 14px; cursor: pointer; transition: 0.2s; font-weight: 500;
+            white-space: nowrap;
         }
         button:hover { background: #444; }
         button.primary { background: #4CAF50; border-color: #4CAF50; font-weight: bold; color: #fff; }
         button.primary:hover { background: #45a049; }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        select {
+            background: #333; color: white; border: 1px solid #555; padding: 6px 10px; 
+            border-radius: 6px; outline: none; cursor: pointer;
+        }
 
         #toolbar { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 10px;}
         #stats { display: none; margin-top: 15px; gap: 20px; font-size: 14px; color: #888; padding: 10px; background: #111; border-radius: 8px; justify-content: center; }
@@ -96,6 +103,15 @@
         ::-webkit-scrollbar-track { background: #121212; }
         ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        /* 模态预览框 */
+        .modal {
+            display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.85); justify-content: center; align-items: center; flex-direction: column;
+        }
+        .modal img { max-width: 90vw; max-height: 80vh; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 8px; background: #fff; object-fit: contain; }
+        .modal-close { position: absolute; top: 20px; right: 30px; font-size: 40px; color: white; cursor: pointer; line-height: 1; }
+        .modal-close:hover { color: #4CAF50; }
     </style>
 </head>
 <body>
@@ -119,7 +135,7 @@
         <div id="single-view">
             <div class="view-header">
                 <button onclick="resetApp()" data-i18n="uploadNew">⬅️ 重新上传</button>
-                <div style="font-size: 12px; color: #aaa;">点击图片也可重新上传</div>
+                <div style="font-size: 12px; color: #aaa;" data-i18n="clickToReupload">点击图片也可重新上传</div>
             </div>
             <canvas id="canvas" onclick="resetApp()"></canvas>
             <div id="stats">
@@ -149,7 +165,15 @@
     <!-- 批量视图 -->
     <div id="batch-view">
         <div class="batch-header">
-            <div style="font-weight: bold;"><span data-i18n="batchMode">批量转换模式</span> (<span id="batch-count">0</span>)</div>
+            <div style="font-weight: bold; display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
+                <span><span data-i18n="batchMode">批量转换模式</span> (<span id="batch-count">0</span>)</span>
+                <select id="batch-format" onchange="onBatchFormatChange()">
+                    <option value="lsfp">LSFP</option>
+                    <option value="png">PNG</option>
+                    <option value="jpeg">JPG</option>
+                    <option value="webp">WebP</option>
+                </select>
+            </div>
             <div style="display: flex; gap: 10px;">
                 <button onclick="downloadAllBatch()" class="primary" id="btn-download-all" data-i18n="downloadAll">一键下载全部</button>
                 <button onclick="resetApp()" data-i18n="uploadNew">⬅️ 重新上传</button>
@@ -158,9 +182,15 @@
         <div class="batch-list" id="batch-list"></div>
     </div>
 
+    <!-- 预览模态框 -->
+    <div id="preview-modal" class="modal" onclick="if(event.target===this) closeModal()">
+        <span class="modal-close" onclick="closeModal()">&times;</span>
+        <img id="modal-img" src="" alt="Preview">
+    </div>
+
     <script>
         // ==========================================
-        // 1. 全局状态定义（必须提前，防止 TDZ 报错）
+        // 1. 全局状态定义
         // ==========================================
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('file-input');
@@ -172,7 +202,8 @@
         let currentFileName = 'image';
         let originalImageObj = null;
         let originalSize = 0;
-        let batchFiles = []; // 批量文件队列
+        let batchFiles = []; 
+        let lastBatchFormat = 'lsfp';
 
         // ==========================================
         // 2. 国际化字典 (i18n)
@@ -180,25 +211,31 @@
         const i18n = {
             zh: {
                 title: "LSFP 全能转换中心", subtitle: "由了了了岭工作室提供技术支持",
-                dropText: "点击或拖拽图片到此处 (支持多选)", formatsText: "支持 PNG, JPG, WebP, BMP, GIF, SVG, ICO, AVIF, TIFF 及 LSFP",
+                dropText: "点击或拖拽图片到此处 (支持多选)", formatsText: "支持所有主流图片格式及 LSFP",
                 installBanner: "📲 安装 LSFP 到桌面体验更好",
-                origSize: "原图大小", currentDim: "当前尺寸", lsfpSize: "LSFP 压缩后",
+                origSize: "原图大小", currentDim: "当前尺寸", lsfpSize: "压缩后大小",
                 resizeW: "缩放宽度(px):", resizeH: "高度:", applyResize: "应用缩放", resetImage: "重置尺寸",
                 quality: "导出质量 (JPG/WebP):", downloadAs: "下载为", downloadLsfp: "✨ 下载为 LSFP", 
-                compressing: "⏳ 正在压缩...", errorParse: "解析失败", errorFormat: "不支持的文件格式！", errorConvert: "转换失败",
-                batchMode: "批量转换模式", downloadAll: "一键下载全部", uploadNew: "⬅️ 重新上传", 
-                statusWait: "等待中", statusConverting: "转换中...", statusDone: "转换完成", download: "下载 LSFP", noFilesToDownload: "还没有转换完成的文件"
+                compressing: "⏳ 处理中...", errorParse: "解析失败", errorFormat: "不支持的文件格式！", errorConvert: "转换失败",
+                batchMode: "批量转换模式", downloadAll: "一键下载全部", uploadNew: "⬅️ 重新上传", clickToReupload: "点击图片也可重新上传",
+                statusWait: "等待中", statusConverting: "处理中...", statusDone: "完成", download: "下载", preview: "预览", noFilesToDownload: "还没有处理完成的文件",
+                lsfpResizeError: "LSFP 文件不支持在此处直接缩放，请重新上传原图。",
+                errorLoad: "格式不支持或文件损坏",
+                confirmChangeFormat: "更改格式将重新转换所有文件，是否继续？"
             },
             en: {
                 title: "LSFP Universal Converter", subtitle: "Powered by LelelelingStudio",
-                dropText: "Click or drag & drop images here (Multi-supported)", formatsText: "Supports PNG, JPG, WebP, BMP, GIF, SVG, ICO, AVIF, TIFF & LSFP",
+                dropText: "Click or drag & drop images here (Multi-supported)", formatsText: "Supports all mainstream image formats & LSFP",
                 installBanner: "📲 Install LSFP for a better experience",
-                origSize: "Original Size", currentDim: "Dimensions", lsfpSize: "LSFP Compressed",
-                resizeW: "Resize Width(px):", resizeH: "Height:", applyResize: "Apply", resetImage: "Reset",
+                origSize: "Original Size", currentDim: "Dimensions", lsfpSize: "Compressed",
+                resizeW: "Resize Width(px):", resizeH: "Height:", applyResize: "Apply", resetImage: "Reset Size",
                 quality: "Export Quality (JPG/WebP):", downloadAs: "Download as", downloadLsfp: "✨ Download as LSFP",
-                compressing: "⏳ Compressing...", errorParse: "Parse failed", errorFormat: "Unsupported format!", errorConvert: "Conversion failed",
-                batchMode: "Batch Mode", downloadAll: "Download All", uploadNew: "⬅️ Upload New",
-                statusWait: "Waiting", statusConverting: "Converting...", statusDone: "Done", download: "Download LSFP", noFilesToDownload: "No converted files to download"
+                compressing: "⏳ Processing...", errorParse: "Parse failed", errorFormat: "Unsupported format!", errorConvert: "Conversion failed",
+                batchMode: "Batch Mode", downloadAll: "Download All", uploadNew: "⬅️ Upload New", clickToReupload: "Click image to re-upload",
+                statusWait: "Waiting", statusConverting: "Processing...", statusDone: "Done", download: "Download", preview: "Preview", noFilesToDownload: "No processed files to download",
+                lsfpResizeError: "LSFP files cannot be resized here. Please upload the original image.",
+                errorLoad: "Format unsupported or file corrupted",
+                confirmChangeFormat: "Changing target format will reconvert all files. Continue?"
             }
         };
 
@@ -218,7 +255,6 @@
         }
         function t(key) { return i18n[currentLang][key] || key; }
 
-        // 初始化语言
         const savedLang = localStorage.getItem('lsfp-lang');
         const browserLang = navigator.language.toLowerCase();
         if (savedLang && i18n[savedLang]) setLanguage(savedLang);
@@ -231,10 +267,9 @@
         });
 
         // ==========================================
-        // 3. 交互事件绑定
+        // 3. 交互事件
         // ==========================================
         dropZone.addEventListener('click', (e) => { 
-            // 如果点击的不是按钮、输入框或图片，并且还在初始状态，就触发上传
             if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'CANVAS') {
                 if (!dropZone.classList.contains('has-image')) fileInput.click(); 
             }
@@ -249,24 +284,22 @@
             if (e.target.files.length > 0) handleFiles(e.target.files);
         });
 
-        // 核心分流器
         async function handleFiles(files) {
             if (files.length === 1) {
-                handleSingleFile(files[0]); // 单文件统统进预览
+                handleSingleFile(files[0]);
             } else {
-                handleBatchFiles(files);    // 多文件进批量
+                handleBatchFiles(files);
             }
         }
 
         // ==========================================
-        // 4. 单图处理（支持普通图 + LSFP解码）
+        // 4. 单图处理
         // ==========================================
         function handleSingleFile(file) {
             currentFileName = file.name.split('.').slice(0, -1).join('.') || 'image';
             originalSize = file.size;
             const isLsfp = file.name.toLowerCase().endsWith('.lsfp');
             
-            // 切换UI显示
             batchView.style.display = 'none';
             singleView.style.display = 'flex';
             dropZone.classList.add('has-image');
@@ -276,8 +309,7 @@
             document.getElementById('controls').style.display = "flex";
 
             if (isLsfp) {
-                // 处理 LSFP 预览
-                originalImageObj = null; // LSFP 文件无法进行基于原图的缩放计算，暂时设为null
+                originalImageObj = null;
                 const reader = new FileReader();
                 reader.onload = async (e) => {
                     try {
@@ -285,11 +317,10 @@
                         canvas.width = imgData.width;
                         canvas.height = imgData.height;
                         ctx.putImageData(imgData, 0, 0);
-                        
                         canvas.style.display = "block";
                         document.getElementById('stats').style.display = "flex";
                         updateSingleStats();
-                        setupSingleToolbar(true); // true表示这是LSFP输入
+                        setupSingleToolbar(true);
                     } catch (err) {
                         alert(t('errorParse') + ": " + err.message);
                         resetApp();
@@ -297,7 +328,6 @@
                 };
                 reader.readAsArrayBuffer(file);
             } else {
-                // 处理普通图片
                 const img = new Image();
                 img.onload = () => {
                     originalImageObj = img;
@@ -308,6 +338,7 @@
                     updateSingleStats();
                     setupSingleToolbar(false);
                 };
+                img.onerror = () => { alert(t('errorLoad')); resetApp(); };
                 img.src = URL.createObjectURL(file);
             }
         }
@@ -315,11 +346,11 @@
         function updateSingleStats() {
             document.getElementById('orig-size').innerText = (originalSize / 1024).toFixed(1) + ' KB';
             document.getElementById('current-dim').innerText = `${canvas.width} x ${canvas.height}`;
-            document.getElementById('lsfp-stat').style.display = "none"; // 每次重置状态
+            document.getElementById('lsfp-stat').style.display = "none";
         }
 
         function applyResize() {
-            if (!originalImageObj) return alert("LSFP文件无法在此处缩放，请使用图像处理软件。");
+            if (!originalImageObj) return alert(t('lsfpResizeError'));
             const w = parseInt(document.getElementById('resize-w').value);
             const h = parseInt(document.getElementById('resize-h').value);
             if (w > 0 && h > 0) {
@@ -341,7 +372,6 @@
             updateSingleStats();
         }
 
-        // isLsfpInput: 如果当前加载的是LSFP，就不显示"转为LSFP"的按钮了
         function setupSingleToolbar(isLsfpInput) {
             const toolbar = document.getElementById('toolbar');
             toolbar.innerHTML = '';
@@ -383,7 +413,7 @@
         }
 
         // ==========================================
-        // 5. 批量处理
+        // 5. 批量处理与格式转换
         // ==========================================
         async function handleBatchFiles(files) {
             dropZone.classList.add('has-image');
@@ -401,11 +431,26 @@
                 batchFiles.push({
                     id: id, file: file, status: 'waiting', 
                     originalSize: file.size, blob: null, lsfpSize: 0, name: file.name,
-                    isLsfp: isLsfp
+                    isLsfp: isLsfp, previewUrl: null, ext: '.lsfp'
                 });
             }
+            document.getElementById('batch-format').value = lastBatchFormat;
             updateBatchUI();
             processBatchQueue();
+        }
+
+        function onBatchFormatChange() {
+            const newFmt = document.getElementById('batch-format').value;
+            if (batchFiles.length > 0 && batchFiles.some(f => f.status === 'done' || f.status === 'converting')) {
+                if (!confirm(t('confirmChangeFormat'))) {
+                    document.getElementById('batch-format').value = lastBatchFormat;
+                    return;
+                }
+                batchFiles.forEach(f => { f.status = 'waiting'; f.blob = null; f.ext = '.' + newFmt; });
+                updateBatchUI();
+                processBatchQueue();
+            }
+            lastBatchFormat = newFmt;
         }
 
         function updateBatchUI() {
@@ -427,12 +472,21 @@
                 if (item.status === 'done') {
                     const ratio = ((1 - item.lsfpSize / item.originalSize) * 100).toFixed(0);
                     const color = item.lsfpSize < item.originalSize ? 'success' : '';
-                    statsHtml += ` → <span class="${color}">${(item.lsfpSize / 1024).toFixed(1)} KB (-${ratio}%)</span>`;
+                    statsHtml += ` → <span class="${color}">${(item.lsfpSize / 1024).toFixed(1)} KB (${ratio}%)</span>`;
+                } else if (item.status === 'error') {
+                    statsHtml += ` → <span style="color:#ff5252">${t('errorLoad')}</span>`;
                 }
 
                 let btnHtml = '';
-                if (item.status === 'done') {
-                    btnHtml = `<button class="primary" onclick="downloadBatchItem('${item.id}')">${t('download')}</button>`;
+                if (item.status === 'error') {
+                    btnHtml = `<button disabled style="background:#d32f2f; border-color:#d32f2f; color:#fff">${t('errorLoad')}</button>`;
+                } else if (item.status === 'done') {
+                    btnHtml = `
+                        <div style="display:flex; gap:10px;">
+                            <button onclick="showPreview('${item.id}')">${t('preview')}</button>
+                            <button class="primary" onclick="downloadBatchItem('${item.id}')">${t('download')}</button>
+                        </div>
+                    `;
                 } else if (item.status === 'converting') {
                     btnHtml = `<button disabled>${t('statusConverting')}</button>`;
                 } else {
@@ -459,12 +513,24 @@
             item.status = 'converting';
             updateBatchUI();
 
+            const targetFmt = document.getElementById('batch-format').value;
+
             try {
-                if (item.isLsfp) {
+                if (item.isLsfp && targetFmt === 'lsfp') {
+                    // 源文件是 lsfp，目标也是 lsfp，直接复制
                     item.status = 'done';
                     item.blob = item.file;
                     item.lsfpSize = item.originalSize;
+                    item.ext = '.lsfp';
+                    // 为了预览，我们需要解码它并画到虚拟画布上
+                    const buffer = await item.file.arrayBuffer();
+                    const imgData = await LSFP.decode(buffer);
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = imgData.width; tempCanvas.height = imgData.height;
+                    tempCanvas.getContext('2d').putImageData(imgData, 0, 0);
+                    item.previewUrl = tempCanvas.toDataURL();
                 } else {
+                    // 需要真正加载图片
                     await new Promise((resolve, reject) => {
                         const img = new Image();
                         img.onload = async () => {
@@ -472,9 +538,19 @@
                             tempCanvas.width = img.width; tempCanvas.height = img.height;
                             const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
                             tempCtx.drawImage(img, 0, 0);
+                            item.previewUrl = tempCanvas.toDataURL();
+                            
                             const imgData = tempCtx.getImageData(0, 0, img.width, img.height);
                             
-                            item.blob = await LSFP.encode(imgData);
+                            // 根据所选格式进行转换
+                            if (targetFmt === 'lsfp') {
+                                item.blob = await LSFP.encode(imgData);
+                                item.ext = '.lsfp';
+                            } else {
+                                item.blob = await new Promise(r => tempCanvas.toBlob(r, `image/${targetFmt}`, 0.9));
+                                item.ext = '.' + targetFmt;
+                            }
+                            
                             item.lsfpSize = item.blob.size;
                             item.status = 'done';
                             resolve();
@@ -495,7 +571,7 @@
         function downloadBatchItem(id) {
             const item = batchFiles.find(f => f.id === id);
             if (item && item.blob) {
-                const newName = item.isLsfp ? item.name : item.name.replace(/\.[^/.]+$/, "") + ".lsfp";
+                const newName = item.isLsfp && item.ext === '.lsfp' ? item.name : item.name.replace(/\.[^/.]+$/, "") + item.ext;
                 downloadBlob(item.blob, newName);
             }
         }
@@ -506,10 +582,23 @@
             
             completed.forEach((item, index) => {
                 setTimeout(() => {
-                    const newName = item.isLsfp ? item.name : item.name.replace(/\.[^/.]+$/, "") + ".lsfp";
+                    const newName = item.isLsfp && item.ext === '.lsfp' ? item.name : item.name.replace(/\.[^/.]+$/, "") + item.ext;
                     downloadBlob(item.blob, newName);
                 }, index * 300);
             });
+        }
+
+        // 预览功能
+        function showPreview(id) {
+            const item = batchFiles.find(f => f.id === id);
+            if (item && item.previewUrl) {
+                document.getElementById('modal-img').src = item.previewUrl;
+                document.getElementById('preview-modal').style.display = 'flex';
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('preview-modal').style.display = 'none';
         }
 
         function resetApp() {
@@ -526,8 +615,8 @@
             document.getElementById('stats').style.display = 'none';
             document.getElementById('lsfp-stat').style.display = 'none';
             fileInput.value = '';
+            closeModal();
             
-            // 清空画布内存
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             originalImageObj = null;
             originalSize = 0;
