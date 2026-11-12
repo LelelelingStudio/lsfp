@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lsfp-v8';
+const CACHE_NAME = 'lsfp-v9-force-update';
 const ASSETS = [
   './',
   './index.html',
