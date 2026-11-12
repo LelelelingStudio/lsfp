@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lsfp-v6'; // 每次更新代码请修改这里
+const CACHE_NAME = 'lsfp-v7';
 const ASSETS = [
   './',
   './index.html',
