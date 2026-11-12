@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LSFP 全能转换中心</title>
+    <title>LSFP Converter</title>
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
@@ -16,16 +16,23 @@
             user-select: none; overflow-x: hidden;
         }
         
+        /* 语言选择器 */
+        #lang-switch {
+            position: absolute; top: 20px; right: 20px;
+            background: #333; color: white; border: 1px solid #555;
+            padding: 6px 12px; border-radius: 8px; outline: none; cursor: pointer;
+        }
+
         /* PWA 安装横幅 */
         #install-banner {
-            display: none; position: fixed; top: 20px; background: #4CAF50; color: white;
-            padding: 12px 24px; border-radius: 30px; font-weight: bold; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4); z-index: 1000;
-            transition: transform 0.2s, background 0.2s; align-items: center; gap: 10px;
+            display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background: #4CAF50; color: white; padding: 12px 24px; border-radius: 30px; 
+            font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4); 
+            z-index: 1000; transition: transform 0.2s, background 0.2s; align-items: center; gap: 10px;
         }
-        #install-banner:hover { background: #45a049; transform: translateY(-2px); }
+        #install-banner:hover { background: #45a049; transform: translateX(-50%) translateY(-2px); }
 
-        h1 { font-weight: 400; margin-bottom: 5px; letter-spacing: 1px; margin-top: 40px;}
+        h1 { font-weight: 400; margin-bottom: 5px; letter-spacing: 1px; margin-top: 50px;}
         p { color: #888; margin-bottom: 20px; font-size: 14px; }
         
         #drop-zone {
@@ -62,7 +69,6 @@
         button:hover { background: #444; }
         button.primary { background: #4CAF50; border-color: #4CAF50; font-weight: bold; }
         button.primary:hover { background: #45a049; }
-        button.blue { background: #2196F3; border-color: #2196F3; }
         
         /* 数据统计卡片 */
         #stats { display: none; margin-top: 15px; gap: 20px; font-size: 14px; color: #888; padding: 10px; background: #111; border-radius: 8px; justify-content: center; }
@@ -70,37 +76,43 @@
     </style>
 </head>
 <body>
-    <!-- PWA 安装提示 -->
-    <div id="install-banner">📲 安装 LSFP 到桌面体验更好</div>
+    <!-- 语言选择器 -->
+    <select id="lang-switch">
+        <option value="en">English</option>
+        <option value="zh">中文</option>
+    </select>
 
-    <h1>LSFP 全能转换中心</h1>
-    <p>由了了了岭工作室提供技术支持</p>
+    <!-- PWA 安装提示 -->
+    <div id="install-banner" data-i18n="installBanner">📲 安装 LSFP 到桌面体验更好</div>
+
+    <h1 data-i18n="title">LSFP 全能转换中心</h1>
+    <p data-i18n="subtitle">由了了了岭工作室提供技术支持</p>
     
     <div id="drop-zone">
         <div class="icon">📁</div>
-        <div id="drop-text">点击或拖拽图片到此处</div>
-        <div class="formats-text">支持 PNG, JPG, WebP, BMP, GIF, SVG, ICO, AVIF, TIFF 及 LSFP</div>
+        <div id="drop-text" data-i18n="dropText">点击或拖拽图片到此处</div>
+        <div class="formats-text" data-i18n="formatsText">支持 PNG, JPG, WebP, BMP, GIF, SVG, ICO, AVIF, TIFF 及 LSFP</div>
         <input type="file" id="file-input" accept=".lsfp, image/*" style="display: none;">
         <canvas id="canvas"></canvas>
     </div>
 
     <div id="stats">
-        <div class="stat-item">原图大小: <span id="orig-size">-</span></div>
-        <div class="stat-item">当前尺寸: <span id="current-dim">-</span></div>
-        <div class="stat-item" id="lsfp-stat" style="display:none;">LSFP 压缩后: <span id="lsfp-size">-</span></div>
+        <div class="stat-item"><span data-i18n="origSize">原图大小</span>: <span id="orig-size">-</span></div>
+        <div class="stat-item"><span data-i18n="currentDim">当前尺寸</span>: <span id="current-dim">-</span></div>
+        <div class="stat-item" id="lsfp-stat" style="display:none;"><span data-i18n="lsfpSize">LSFP 压缩后</span>: <span id="lsfp-size">-</span></div>
     </div>
 
     <div id="controls">
         <div class="control-row">
-            <label>缩放宽度(px):</label>
-            <input type="number" id="resize-w" placeholder="宽">
-            <label>高度:</label>
-            <input type="number" id="resize-h" placeholder="高">
-            <button onclick="applyResize()">应用缩放</button>
-            <button onclick="resetImage()">重置</button>
+            <label data-i18n="resizeW">缩放宽度(px):</label>
+            <input type="number" id="resize-w" placeholder="W">
+            <label data-i18n="resizeH">高度:</label>
+            <input type="number" id="resize-h" placeholder="H">
+            <button onclick="applyResize()" data-i18n="applyResize">应用缩放</button>
+            <button onclick="resetImage()" data-i18n="resetImage">重置</button>
         </div>
         <div class="control-row">
-            <label>导出质量 (JPG/WebP):</label>
+            <label data-i18n="quality">导出质量 (JPG/WebP):</label>
             <input type="range" id="quality" min="0.1" max="1.0" step="0.1" value="0.9">
             <span id="quality-val">0.9</span>
         </div>
@@ -108,6 +120,101 @@
     </div>
 
     <script>
+        // ==========================================
+        // 国际化字典 (i18n)
+        // ==========================================
+        const i18n = {
+            zh: {
+                title: "LSFP 全能转换中心",
+                subtitle: "由了了了岭工作室提供技术支持",
+                dropText: "点击或拖拽图片到此处",
+                formatsText: "支持 PNG, JPG, WebP, BMP, GIF, SVG, ICO, AVIF, TIFF 及 LSFP",
+                installBanner: "📲 安装 LSFP 到桌面体验更好",
+                origSize: "原图大小",
+                currentDim: "当前尺寸",
+                lsfpSize: "LSFP 压缩后",
+                resizeW: "缩放宽度(px):",
+                resizeH: "高度:",
+                applyResize: "应用缩放",
+                resetImage: "重置",
+                quality: "导出质量 (JPG/WebP):",
+                downloadAs: "下载为",
+                downloadLsfp: "✨ 下载为 LSFP",
+                compressing: "⏳ 正在压缩...",
+                errorParse: "解析失败",
+                errorFormat: "不支持的文件格式！请拖入支持的图片或 .lsfp 文件",
+                errorConvert: "转换失败",
+                notLsfp: "不是有效的 LSFP 文件",
+                errorResize: "请输入有效的宽度或高度"
+            },
+            en: {
+                title: "LSFP Universal Converter",
+                subtitle: "Powered by LelelelingStudio",
+                dropText: "Click or drag & drop images here",
+                formatsText: "Supports PNG, JPG, WebP, BMP, GIF, SVG, ICO, AVIF, TIFF & LSFP",
+                installBanner: "📲 Install LSFP for a better desktop experience",
+                origSize: "Original Size",
+                currentDim: "Current Dimensions",
+                lsfpSize: "LSFP Compressed",
+                resizeW: "Resize Width(px):",
+                resizeH: "Height:",
+                applyResize: "Apply Resize",
+                resetImage: "Reset",
+                quality: "Export Quality (JPG/WebP):",
+                downloadAs: "Download as",
+                downloadLsfp: "✨ Download as LSFP",
+                compressing: "⏳ Compressing...",
+                errorParse: "Parse failed",
+                errorFormat: "Unsupported format! Please drop a supported image or .lsfp file.",
+                errorConvert: "Conversion failed",
+                notLsfp: "Not a valid LSFP file",
+                errorResize: "Please enter a valid width or height"
+            }
+        };
+
+        let currentLang = 'en';
+
+        function setLanguage(lang) {
+            if (!i18n[lang]) lang = 'en';
+            currentLang = lang;
+            document.getElementById('lang-switch').value = lang;
+            
+            // 替换带有 data-i18n 属性的静态文本
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18n[lang][key]) el.innerText = i18n[lang][key];
+            });
+
+            // 动态按钮需要重新生成
+            if (document.getElementById('controls').style.display === 'flex') {
+                setupToolbar();
+            }
+        }
+
+        function t(key) {
+            return i18n[currentLang][key] || key;
+        }
+
+        // 初始化语言：优先读取本地存储，其次检测浏览器语言
+        const savedLang = localStorage.getItem('lsfp-lang');
+        const browserLang = navigator.language.toLowerCase();
+        if (savedLang && i18n[savedLang]) {
+            setLanguage(savedLang);
+        } else if (browserLang.startsWith('zh')) {
+            setLanguage('zh');
+        } else {
+            setLanguage('en');
+        }
+
+        document.getElementById('lang-switch').addEventListener('change', (e) => {
+            const lang = e.target.value;
+            localStorage.setItem('lsfp-lang', lang);
+            setLanguage(lang);
+        });
+
+        // ==========================================
+        // 核心逻辑
+        // ==========================================
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('file-input');
         const canvas = document.getElementById('canvas');
@@ -117,15 +224,13 @@
         const stats = document.getElementById('stats');
         
         let currentFileName = 'image';
-        let originalImageObj = null; // 用于重置
+        let originalImageObj = null;
         let originalSize = 0;
 
-        // 初始化质量滑动条
         document.getElementById('quality').addEventListener('input', (e) => {
             document.getElementById('quality-val').innerText = e.target.value;
         });
 
-        // 拖拽与点击
         dropZone.addEventListener('click', () => { if (!dropZone.classList.contains('has-image')) fileInput.click(); });
         dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
         dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
@@ -147,7 +252,7 @@
                 reader.onload = async (e) => {
                     try {
                         await decodeLSFP(e.target.result); 
-                    } catch (err) { alert("解析失败: " + err.message); }
+                    } catch (err) { alert(t('errorParse') + ": " + err.message); }
                 };
                 reader.readAsArrayBuffer(file);
             } else if (file.type.startsWith('image/') || /\.(png|jpg|jpeg|webp|bmp|gif|svg|ico|avif|tiff)$/i.test(file.name)) {
@@ -161,7 +266,7 @@
                 };
                 img.src = URL.createObjectURL(file);
             } else {
-                alert("不支持的文件格式！请拖入支持的图片或 .lsfp 文件");
+                alert(t('errorFormat'));
             }
         }
 
@@ -196,7 +301,7 @@
                 ctx.drawImage(originalImageObj, 0, 0, canvas.width, canvas.height);
                 updateStats();
             } else {
-                alert("请输入有效的宽度或高度");
+                alert(t('errorResize'));
             }
         }
 
@@ -221,7 +326,7 @@
 
             formats.forEach(fmt => {
                 const btn = document.createElement('button');
-                btn.innerText = `下载为 ${fmt.name}`;
+                btn.innerText = `${t('downloadAs')} ${fmt.name}`;
                 btn.onclick = () => {
                     const quality = parseFloat(document.getElementById('quality').value);
                     canvas.toBlob((blob) => downloadBlob(blob, `${currentFileName}.${fmt.ext}`), fmt.type, quality);
@@ -231,9 +336,9 @@
 
             const btnLSFP = document.createElement('button');
             btnLSFP.className = 'primary';
-            btnLSFP.innerText = `✨ 下载为 LSFP`;
+            btnLSFP.innerText = t('downloadLsfp');
             btnLSFP.onclick = async () => {
-                btnLSFP.innerText = `⏳ 正在压缩...`;
+                btnLSFP.innerText = t('compressing');
                 try {
                     const result = await encodeToLSFP();
                     downloadBlob(result.blob, `${currentFileName}.lsfp`);
@@ -242,9 +347,9 @@
                     document.getElementById('lsfp-size').innerText = (result.blob.size / 1024).toFixed(1) + ' KB';
                     document.getElementById('lsfp-size').style.color = result.blob.size < originalSize ? '#4CAF50' : '#ff5252';
                 } catch (e) {
-                    alert("转换失败: " + e.message);
+                    alert(t('errorConvert') + ": " + e.message);
                 }
-                btnLSFP.innerText = `✨ 下载为 LSFP`;
+                btnLSFP.innerText = t('downloadLsfp');
             };
             toolbar.appendChild(btnLSFP);
         }
@@ -262,14 +367,11 @@
             const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const data = imgData.data;
             
-            // 1. 收集所有出现过的颜色
             const colorCounts = new Map();
             for (let i = 0; i < data.length; i += 4) {
                 const a = data[i+3];
-                // 忽略完全透明的像素
                 if (a === 0) continue;
                 
-                // 简单的 Alpha 混合白底
                 let r = data[i], g = data[i+1], b = data[i+2];
                 if (a < 255) {
                     r = Math.round((r * a + 255 * (255 - a)) / 255);
@@ -280,20 +382,17 @@
                 colorCounts.set(hex, (colorCounts.get(hex) || 0) + 1);
             }
 
-            // 2. 将颜色按频次排序
             let sortedColors = [...colorCounts.entries()].sort((a, b) => b[1] - a[1]);
             let palette = [];
             let colorMap = new Map();
 
             if (sortedColors.length <= 256) {
-                // 完美无损：颜色少于 256 直接全收
                 sortedColors.forEach(([hex], idx) => {
                     palette.push([(hex >> 16) & 0xFF, (hex >> 8) & 0xFF, hex & 0xFF]);
                     colorMap.set(hex, idx);
                 });
             } else {
-                // 智能有损：使用桶排序（分桶取平均），防止整体变暗
-                const buckets = new Map(); // 16x16x16 = 4096 个桶
+                const buckets = new Map();
                 for (const [hex, count] of sortedColors) {
                     const r = (hex >> 16) & 0xFF, g = (hex >> 8) & 0xFF, b = hex & 0xFF;
                     const bucketKey = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
@@ -303,17 +402,15 @@
                     bucket.r += r * count; bucket.g += g * count; bucket.b += b * count; bucket.count += count;
                 }
                 
-                // 找出最大的 256 个桶
                 const sortedBuckets = [...buckets.values()].sort((a, b) => b.count - a.count).slice(0, 256);
-                sortedBuckets.forEach((bucket, idx) => {
-                    // 计算平均颜色，这样绝对不会偏暗
-                    const avgR = Math.round(bucket.r / bucket.count);
-                    const avgG = Math.round(bucket.g / bucket.count);
-                    const avgB = Math.round(bucket.b / bucket.count);
-                    palette.push([avgR, avgG, avgB]);
+                sortedBuckets.forEach((bucket) => {
+                    palette.push([
+                        Math.round(bucket.r / bucket.count),
+                        Math.round(bucket.g / bucket.count),
+                        Math.round(bucket.b / bucket.count)
+                    ]);
                 });
 
-                // 将原有颜色映射到最近的调色板颜色
                 for (const [hex] of sortedColors) {
                     const r = (hex >> 16) & 0xFF, g = (hex >> 8) & 0xFF, b = hex & 0xFF;
                     let minDist = Infinity, bestIdx = 0;
@@ -326,12 +423,11 @@
                 }
             }
 
-            // 3. 构建像素 ID 数组
             const totalPixels = canvas.width * canvas.height;
             const pixels = new Uint8Array(totalPixels);
             for (let i = 0, p = 0; i < data.length; i += 4, p++) {
                 const a = data[i+3];
-                if (a === 0) { pixels[p] = 0; continue; } // 透明默认为 0
+                if (a === 0) { pixels[p] = 0; continue; }
                 let r = data[i], g = data[i+1], b = data[i+2];
                 if (a < 255) {
                     r = Math.round((r * a + 255 * (255 - a)) / 255);
@@ -341,7 +437,6 @@
                 pixels[p] = colorMap.get((r << 16) | (g << 8) | b);
             }
 
-            // 4. 打包二进制 (LSFP格式)
             const buffer = [];
             const writeU8 = (v) => buffer.push(v & 0xFF);
             const writeU16 = (v) => { writeU8(v); writeU8(v >> 8); };
@@ -353,7 +448,6 @@
             writeU16(palette.length);
             for (let i = 0; i < palette.length; i++) { writeU8(palette[i][0]); writeU8(palette[i][1]); writeU8(palette[i][2]); }
 
-            // 写入 RLE
             writeU8(0x01); 
             const rleData = [];
             for (let i = 0; i < totalPixels; ) {
@@ -366,7 +460,6 @@
             writeU32(rleData.length); rleData.forEach(b => writeU8(b));
             writeU8(0xFF); writeU32(0);
 
-            // 5. Gzip 压缩
             const cs = new CompressionStream('gzip');
             const writer = cs.writable.getWriter();
             writer.write(new Uint8Array(buffer));
@@ -395,7 +488,7 @@
             const dataView = new DataView(rawBuffer);
             let offset = 0;
             const magic = String.fromCharCode(dataView.getUint8(0), dataView.getUint8(1), dataView.getUint8(2), dataView.getUint8(3));
-            if (magic !== 'LSFP') throw new Error("不是有效的 LSFP 文件");
+            if (magic !== 'LSFP') throw new Error(t('notLsfp'));
             offset += 6; 
             
             const width = dataView.getUint32(offset, true); offset += 4;
@@ -453,7 +546,6 @@
             }
             ctx.putImageData(imgData, 0, 0);
             
-            // 如果是 LSFP，重置原始状态以便后续操作
             originalImageObj = null; 
             originalSize = buffer.byteLength;
             showUI();
