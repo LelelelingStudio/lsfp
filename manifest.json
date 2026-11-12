@@ -1,11 +1,11 @@
 {
-  "name": "LSFP 全能转换中心",
+  "name": "LSFP Converter",
   "short_name": "LSFP",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#121212",
   "theme_color": "#121212",
-  "description": "由了了了岭工作室提供的图片压缩与格式转换服务",
+  "description": "A privacy-first image compression and format conversion tool powered by LelelelingStudio.",
   "icons": [
     {
       "src": "icon-192.png",
