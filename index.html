@@ -8,9 +8,7 @@
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     
-    <!-- 核心库和依赖 -->
     <script src="lsfp.js"></script>
-    <!-- 使用更稳定的 CDN -->
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     
     <style>
@@ -22,37 +20,20 @@
             user-select: none; overflow-x: hidden;
         }
         
-        #lang-switch {
-            position: absolute; top: 20px; right: 20px;
-            background: #333; color: white; border: 1px solid #555;
-            padding: 6px 12px; border-radius: 8px; outline: none; cursor: pointer; z-index: 10;
-        }
-
-        #install-banner {
-            display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-            background: #4CAF50; color: white; padding: 12px 24px; border-radius: 30px; 
-            font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4); 
-            z-index: 1000; transition: transform 0.2s, background 0.2s; align-items: center; gap: 10px;
-        }
+        #lang-switch { position: absolute; top: 20px; right: 20px; background: #333; color: white; border: 1px solid #555; padding: 6px 12px; border-radius: 8px; outline: none; cursor: pointer; z-index: 10; }
+        #install-banner { display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #4CAF50; color: white; padding: 12px 24px; border-radius: 30px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4); z-index: 1000; transition: transform 0.2s, background 0.2s; align-items: center; gap: 10px; }
         #install-banner:hover { background: #45a049; transform: translateX(-50%) translateY(-2px); }
 
         h1 { font-weight: 400; margin-bottom: 5px; letter-spacing: 1px; margin-top: 50px;}
         p { color: #888; margin-bottom: 20px; font-size: 14px; }
         
-        #drop-zone {
-            border: 2px dashed #444; border-radius: 16px;
-            width: 85vw; max-width: 800px; min-height: 25vh;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            transition: all 0.3s ease; background: #1e1e1e; cursor: pointer;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3); position: relative; padding: 40px 0;
-        }
+        #drop-zone { border: 2px dashed #444; border-radius: 16px; width: 85vw; max-width: 800px; min-height: 25vh; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.3s ease; background: #1e1e1e; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.3); position: relative; padding: 40px 0; }
         #drop-zone.dragover { border-color: #4CAF50; background: #252525; transform: scale(1.02); }
         #drop-zone.has-image { border: none; background: transparent; box-shadow: none; padding: 0; cursor: default;}
         
         .icon { font-size: 48px; margin-bottom: 15px; }
         .formats-text { font-size: 12px; color: #666; margin-top: 10px; max-width: 80%; text-align: center; }
         
-        /* 单图视图 */
         #single-view { display: none; flex-direction: column; align-items: center; width: 100%; }
         .view-header { width: 85vw; max-width: 800px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         canvas { display: none; max-width: 85vw; max-height: 40vh; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); background: #fff; object-fit: contain; cursor: pointer; }
@@ -63,7 +44,6 @@
         input[type="number"] { background: #333; border: 1px solid #555; color: white; padding: 6px 10px; border-radius: 6px; width: 80px; }
         input[type="range"] { width: 150px; }
         
-        /* 批量模式 */
         #batch-view { display: none; width: 85vw; max-width: 800px; flex-direction: column; gap: 10px; margin-top: 20px;}
         .batch-header { display: flex; justify-content: space-between; align-items: center; background: #1e1e1e; padding: 15px; border-radius: 12px; margin-bottom: 10px;}
         .batch-list { display: flex; flex-direction: column; gap: 10px; max-height: 50vh; overflow-y: auto; padding-right: 5px; }
@@ -73,11 +53,7 @@
         .batch-stats { font-size: 12px; color: #888; }
         .batch-stats span.success { color: #4CAF50; font-weight: bold; }
         
-        button {
-            background: #333; color: white; border: 1px solid #555; padding: 8px 16px; 
-            border-radius: 8px; font-size: 14px; cursor: pointer; transition: 0.2s; font-weight: 500;
-            white-space: nowrap;
-        }
+        button { background: #333; color: white; border: 1px solid #555; padding: 8px 16px; border-radius: 8px; font-size: 14px; cursor: pointer; transition: 0.2s; font-weight: 500; white-space: nowrap; }
         button:hover { background: #444; }
         button.primary { background: #4CAF50; border-color: #4CAF50; font-weight: bold; color: #fff; }
         button.primary:hover { background: #45a049; }
@@ -92,7 +68,6 @@
         #stats { display: none; margin-top: 15px; gap: 20px; font-size: 14px; color: #888; padding: 10px; background: #111; border-radius: 8px; justify-content: center; }
         .stat-item span { color: #fff; font-weight: bold; }
 
-        /* 智能体积对比板 */
         #comparison-board { display: none; width: 100%; margin-top: 10px; background: #111; border-radius: 12px; padding: 15px; border: 1px solid #333; box-sizing: border-box;}
         .compare-item { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #333; font-size: 14px; align-items: center; transition: 0.2s; }
         .compare-item:last-child { border-bottom: none; }
@@ -112,7 +87,6 @@
         ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #555; }
 
-        /* 模态预览框 */
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); justify-content: center; align-items: center; flex-direction: column; }
         .modal img { max-width: 90vw; max-height: 80vh; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 8px; background: #fff; object-fit: contain; }
         .modal-close { position: absolute; top: 20px; right: 30px; font-size: 40px; color: white; cursor: pointer; line-height: 1; }
@@ -136,7 +110,6 @@
         <div class="formats-text" data-i18n="formatsText">支持所有主流图片格式及 LSFP</div>
         <input type="file" id="file-input" accept=".lsfp, image/*" multiple style="display: none;">
         
-        <!-- 单图视图 -->
         <div id="single-view">
             <div class="view-header">
                 <button onclick="resetApp()" data-i18n="uploadNew">⬅️ 重新上传</button>
@@ -149,9 +122,8 @@
                 <div class="stat-item"><span data-i18n="currentDim">当前尺寸</span>: <span id="current-dim">-</span></div>
             </div>
 
-            <!-- 二维码识别结果展示 -->
             <div id="qr-status">
-                <div class="qr-title" data-i18n="qrDetected">🎯 已识别二维码 (已启用语义级降维压缩)</div>
+                <div class="qr-title" data-i18n="qrDetected">🎯 二维码识别状态</div>
                 <div class="qr-content-box" id="qr-content-text"></div>
                 <div class="qr-actions">
                     <button onclick="copyQRText()" data-i18n="copy">复制内容</button>
@@ -184,7 +156,6 @@
         </div>
     </div>
 
-    <!-- 批量视图 -->
     <div id="batch-view">
         <div class="batch-header">
             <div style="font-weight: bold; display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
@@ -204,16 +175,12 @@
         <div class="batch-list" id="batch-list"></div>
     </div>
 
-    <!-- 预览模态框 -->
     <div id="preview-modal" class="modal" onclick="if(event.target===this) closeModal()">
         <span class="modal-close" onclick="closeModal()">&times;</span>
         <img id="modal-img" src="" alt="Preview">
     </div>
 
     <script>
-        // ==========================================
-        // 1. 全局状态与 UI 元素
-        // ==========================================
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('file-input');
         const singleView = document.getElementById('single-view');
@@ -230,9 +197,6 @@
         let batchFiles = []; 
         let lastBatchFormat = 'lsfp';
 
-        // ==========================================
-        // 2. 国际化字典
-        // ==========================================
         const i18n = {
             zh: {
                 title: "LSFP 全能转换中心", subtitle: "由了了了岭工作室提供技术支持",
@@ -247,7 +211,8 @@
                 lsfpResizeError: "LSFP 文件不支持在此处直接缩放，请重新上传原图。",
                 errorLoad: "格式不支持或文件损坏", confirmChangeFormat: "更改格式将重新转换所有文件，是否继续？",
                 winner: "🏆 体积最小",
-                qrDetected: "🎯 已识别二维码 (已启用语义级降维压缩)", copy: "复制内容", openLink: "🌐 打开网址", copied: "✅ 已复制！"
+                qrDetected: "🎯 二维码识别状态", copy: "复制内容", openLink: "🌐 打开网址", copied: "✅ 已复制！",
+                qrFail: "未能识别出标准二维码（图片可能带有网格线或对比度不足）", qrSuccess: "🎯 检测到二维码 (已启用语义降维)"
             },
             en: {
                 title: "LSFP Universal Converter", subtitle: "Powered by LelelelingStudio",
@@ -262,7 +227,8 @@
                 lsfpResizeError: "LSFP files cannot be resized here. Please upload the original image.",
                 errorLoad: "Format unsupported or file corrupted", confirmChangeFormat: "Changing target format will reconvert all files. Continue?",
                 winner: "🏆 Smallest",
-                qrDetected: "🎯 QR Code Detected (Semantic Compression Active)", copy: "Copy Content", openLink: "🌐 Open Link", copied: "✅ Copied!"
+                qrDetected: "🎯 QR Code Status", copy: "Copy Content", openLink: "🌐 Open Link", copied: "✅ Copied!",
+                qrFail: "Failed to recognize standard QR code (grid lines or low contrast)", qrSuccess: "🎯 QR Detected (Semantic Compression Active)"
             }
         };
 
@@ -294,9 +260,6 @@
             setLanguage(e.target.value);
         });
 
-        // ==========================================
-        // 3. 交互事件
-        // ==========================================
         dropZone.addEventListener('click', (e) => { 
             if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'CANVAS' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'A') {
                 if (!dropZone.classList.contains('has-image')) fileInput.click(); 
@@ -317,9 +280,6 @@
             else handleBatchFiles(files);
         }
 
-        // ==========================================
-        // 4. 单图模式
-        // ==========================================
         function handleSingleFile(file) {
             currentFileName = file.name.split('.').slice(0, -1).join('.') || 'image';
             originalSize = file.size;
@@ -370,7 +330,6 @@
                     updateSingleStats();
                     setupSingleToolbar();
                     
-                    // 稍微延迟一下，确保画布渲染完毕
                     setTimeout(() => {
                         detectQRCode();
                         runComparison(); 
@@ -414,7 +373,7 @@
         }
 
         // ==========================================
-        // 核心：二维码智能识别与结果展示
+        // 核心：二维码智能识别与结果展示 (修复版)
         // ==========================================
         function detectQRCode() {
             hasQRCode = false;
@@ -422,42 +381,41 @@
             document.getElementById('qr-status').style.display = 'none';
             if (typeof jsQR === 'undefined') return;
 
-            // 限制扫描尺寸，防止超大图导致浏览器卡死
-            const maxDim = 1500;
-            let scanW = canvas.width, scanH = canvas.height;
-            if (scanW > maxDim || scanH > maxDim) {
-                const ratio = Math.min(maxDim / scanW, maxDim / scanH);
-                scanW = Math.floor(scanW * ratio);
-                scanH = Math.floor(scanH * ratio);
-            }
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = scanW;
-            tempCanvas.height = scanH;
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCtx.drawImage(canvas, 0, 0, scanW, scanH);
-            
-            const imgData = tempCtx.getImageData(0, 0, scanW, scanH);
-            const code = jsQR(imgData.data, scanW, scanH, { inversionAttempts: "dontInvert" });
+            try {
+                // 直接扫描原图，绝不缩放，保证清晰度
+                const width = canvas.width;
+                const height = canvas.height;
+                const imgData = ctx.getImageData(0, 0, width, height);
+                
+                // 使用 attemptBoth，支持反色
+                const code = jsQR(imgData.data, width, height, { inversionAttempts: "attemptBoth" });
 
-            if (code && code.data) {
-                hasQRCode = true;
-                currentQRText = code.data;
-                
-                // 填充 UI
-                document.getElementById('qr-content-text').innerText = currentQRText;
-                document.getElementById('qr-status').style.display = 'block';
-                
-                // 判断是否 URL
-                const isUrl = /^(https?:\/\/|www\.)/i.test(currentQRText.trim());
-                const linkBtn = document.getElementById('qr-link');
-                if (isUrl) {
-                    let href = currentQRText.trim();
-                    if (!/^https?:\/\//i.test(href)) href = 'http://' + href;
-                    linkBtn.href = href;
-                    linkBtn.style.display = 'inline-flex';
+                if (code && code.data) {
+                    hasQRCode = true;
+                    currentQRText = code.data;
+                    document.getElementById('qr-content-text').innerText = currentQRText;
+                    document.getElementById('qr-status').style.display = 'block';
+                    document.querySelector('.qr-title').innerText = t('qrSuccess');
+                    
+                    const isUrl = /^(https?:\/\/|www\.)/i.test(currentQRText.trim());
+                    const linkBtn = document.getElementById('qr-link');
+                    if (isUrl) {
+                        let href = currentQRText.trim();
+                        if (!/^https?:\/\//i.test(href)) href = 'http://' + href;
+                        linkBtn.href = href;
+                        linkBtn.style.display = 'inline-flex';
+                    } else {
+                        linkBtn.style.display = 'none';
+                    }
                 } else {
-                    linkBtn.style.display = 'none';
+                    // 如果没识别出来，给出提示，不让用户以为坏了
+                    document.getElementById('qr-content-text').innerText = t('qrFail');
+                    document.getElementById('qr-status').style.display = 'block';
+                    document.querySelector('.qr-title').innerText = t('qrDetected');
+                    document.getElementById('qr-link').style.display = 'none';
                 }
+            } catch (e) {
+                console.error("二维码扫描错误:", e);
             }
         }
 
@@ -472,9 +430,6 @@
             }
         }
 
-        // ==========================================
-        // 智能体积对比
-        // ==========================================
         async function runComparison() {
             if (isLsfpInput || !originalImageObj) return;
             
@@ -526,9 +481,6 @@
             });
         }
 
-        // ==========================================
-        // 工具栏生成
-        // ==========================================
         function setupSingleToolbar() {
             const toolbar = document.getElementById('toolbar');
             toolbar.innerHTML = '';
@@ -579,9 +531,7 @@
             }
         }
 
-        // ==========================================
-        // 5. 批量模式
-        // ==========================================
+        // 批量模式保持不变...
         async function handleBatchFiles(files) {
             dropZone.classList.add('has-image');
             document.querySelector('.icon').style.display = 'none';
