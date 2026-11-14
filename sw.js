@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lsfp-v15'; // 改了这里
+const CACHE_NAME = 'lsfp-v16'; // 改了这里
 const ASSETS = [
   './',
   './index.html',
