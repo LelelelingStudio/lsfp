@@ -1,9 +1,11 @@
-const CACHE_NAME = 'lsfp-v13'; // 升级版本号
+const CACHE_NAME = 'lsfp-v15'; // 改了这里
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './lsfp.js',
+  './lsfp-decoder.js', // 新增
+  './lsfp-encoder.js', // 新增
   './icon-192.png',
   './icon-512.png'
 ];
