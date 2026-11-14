@@ -8,10 +8,10 @@
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     
-    <!-- 核心库和依赖，使用更稳定的 unpkg CDN -->
+    <!-- 核心库和依赖 -->
     <script src="lsfp.js"></script>
-    <script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
-    <script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js"></script>
+    <!-- 使用更稳定的 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     
     <style>
         :root { color-scheme: dark; }
@@ -82,6 +82,9 @@
         button.primary { background: #4CAF50; border-color: #4CAF50; font-weight: bold; color: #fff; }
         button.primary:hover { background: #45a049; }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .link-btn { background: #2196F3; color: white; border: none; text-decoration: none; padding: 8px 16px; border-radius: 8px; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center;}
+        .link-btn:hover { background: #1976D2; }
 
         select { background: #333; color: white; border: 1px solid #555; padding: 6px 10px; border-radius: 6px; outline: none; cursor: pointer; }
 
@@ -98,8 +101,11 @@
         .compare-size { color: #4CAF50; font-family: monospace; font-size: 16px; }
         .winner-badge { background: #4CAF50; color: #fff; font-size: 12px; padding: 2px 8px; border-radius: 12px; margin-left: 10px; }
 
-        /* 二维码识别提示 */
-        #qr-status { display: none; background: #2196F3; color: white; padding: 10px; border-radius: 8px; margin-top: 10px; text-align: center; font-weight: bold; width: 100%; box-sizing: border-box;}
+        /* 二维码识别提示与内容 */
+        #qr-status { display: none; width: 100%; background: #1a2a3a; border: 1px solid #2196F3; border-radius: 12px; padding: 15px; margin-top: 10px; box-sizing: border-box; }
+        .qr-title { color: #4CAF50; font-weight: bold; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .qr-content-box { background: #111; padding: 10px; border-radius: 8px; word-break: break-all; font-family: monospace; color: #fff; font-size: 14px; max-height: 100px; overflow-y: auto; border: 1px solid #333; }
+        .qr-actions { display: flex; gap: 10px; margin-top: 10px; }
         
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #121212; }
@@ -143,7 +149,15 @@
                 <div class="stat-item"><span data-i18n="currentDim">当前尺寸</span>: <span id="current-dim">-</span></div>
             </div>
 
-            <div id="qr-status">🎯 已识别二维码，将自动应用语义级降维压缩！</div>
+            <!-- 二维码识别结果展示 -->
+            <div id="qr-status">
+                <div class="qr-title" data-i18n="qrDetected">🎯 已识别二维码 (已启用语义级降维压缩)</div>
+                <div class="qr-content-box" id="qr-content-text"></div>
+                <div class="qr-actions">
+                    <button onclick="copyQRText()" data-i18n="copy">复制内容</button>
+                    <a id="qr-link" href="#" target="_blank" class="link-btn" style="display:none;" data-i18n="openLink">🌐 打开网址</a>
+                </div>
+            </div>
 
             <div id="controls">
                 <div class="control-row">
@@ -212,6 +226,7 @@
         let originalSize = 0;
         let isLsfpInput = false;
         let hasQRCode = false;
+        let currentQRText = "";
         let batchFiles = []; 
         let lastBatchFormat = 'lsfp';
 
@@ -231,7 +246,8 @@
                 statusWait: "等待中", statusConverting: "处理中...", statusDone: "完成", download: "下载", preview: "预览", noFilesToDownload: "还没有处理完成的文件",
                 lsfpResizeError: "LSFP 文件不支持在此处直接缩放，请重新上传原图。",
                 errorLoad: "格式不支持或文件损坏", confirmChangeFormat: "更改格式将重新转换所有文件，是否继续？",
-                winner: "🏆 体积最小"
+                winner: "🏆 体积最小",
+                qrDetected: "🎯 已识别二维码 (已启用语义级降维压缩)", copy: "复制内容", openLink: "🌐 打开网址", copied: "✅ 已复制！"
             },
             en: {
                 title: "LSFP Universal Converter", subtitle: "Powered by LelelelingStudio",
@@ -245,7 +261,8 @@
                 statusWait: "Waiting", statusConverting: "Processing...", statusDone: "Done", download: "Download", preview: "Preview", noFilesToDownload: "No processed files to download",
                 lsfpResizeError: "LSFP files cannot be resized here. Please upload the original image.",
                 errorLoad: "Format unsupported or file corrupted", confirmChangeFormat: "Changing target format will reconvert all files. Continue?",
-                winner: "🏆 Smallest"
+                winner: "🏆 Smallest",
+                qrDetected: "🎯 QR Code Detected (Semantic Compression Active)", copy: "Copy Content", openLink: "🌐 Open Link", copied: "✅ Copied!"
             }
         };
 
@@ -281,7 +298,7 @@
         // 3. 交互事件
         // ==========================================
         dropZone.addEventListener('click', (e) => { 
-            if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'CANVAS' && e.target.tagName !== 'SELECT') {
+            if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'CANVAS' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'A') {
                 if (!dropZone.classList.contains('has-image')) fileInput.click(); 
             }
         });
@@ -308,6 +325,7 @@
             originalSize = file.size;
             isLsfpInput = file.name.toLowerCase().endsWith('.lsfp');
             hasQRCode = false;
+            currentQRText = "";
             document.getElementById('qr-status').style.display = 'none';
             
             batchView.style.display = 'none';
@@ -352,11 +370,11 @@
                     updateSingleStats();
                     setupSingleToolbar();
                     
-                    // 延迟一点执行，确保 Canvas 渲染完毕
+                    // 稍微延迟一下，确保画布渲染完毕
                     setTimeout(() => {
                         detectQRCode();
                         runComparison(); 
-                    }, 100);
+                    }, 50);
                 };
                 img.onerror = () => { alert(t('errorLoad')); resetApp(); };
                 img.src = URL.createObjectURL(file);
@@ -396,15 +414,16 @@
         }
 
         // ==========================================
-        // 优化的二维码识别 (降采样防超时)
+        // 核心：二维码智能识别与结果展示
         // ==========================================
         function detectQRCode() {
             hasQRCode = false;
+            currentQRText = "";
             document.getElementById('qr-status').style.display = 'none';
             if (typeof jsQR === 'undefined') return;
 
-            // 降采样到 600px 以内，极大提升 jsQR 识别率和速度
-            const maxDim = 600;
+            // 限制扫描尺寸，防止超大图导致浏览器卡死
+            const maxDim = 1500;
             let scanW = canvas.width, scanH = canvas.height;
             if (scanW > maxDim || scanH > maxDim) {
                 const ratio = Math.min(maxDim / scanW, maxDim / scanH);
@@ -418,12 +437,38 @@
             tempCtx.drawImage(canvas, 0, 0, scanW, scanH);
             
             const imgData = tempCtx.getImageData(0, 0, scanW, scanH);
-            const code = jsQR(imgData.data, scanW, scanH);
+            const code = jsQR(imgData.data, scanW, scanH, { inversionAttempts: "dontInvert" });
 
-            if (code) {
+            if (code && code.data) {
                 hasQRCode = true;
+                currentQRText = code.data;
+                
+                // 填充 UI
+                document.getElementById('qr-content-text').innerText = currentQRText;
                 document.getElementById('qr-status').style.display = 'block';
-                document.getElementById('qr-status').innerText = `🎯 检测到二维码: ${code.data.substring(0, 30)}${code.data.length > 30 ? '...' : ''}`;
+                
+                // 判断是否 URL
+                const isUrl = /^(https?:\/\/|www\.)/i.test(currentQRText.trim());
+                const linkBtn = document.getElementById('qr-link');
+                if (isUrl) {
+                    let href = currentQRText.trim();
+                    if (!/^https?:\/\//i.test(href)) href = 'http://' + href;
+                    linkBtn.href = href;
+                    linkBtn.style.display = 'inline-flex';
+                } else {
+                    linkBtn.style.display = 'none';
+                }
+            }
+        }
+
+        function copyQRText() {
+            if (currentQRText) {
+                navigator.clipboard.writeText(currentQRText).then(() => {
+                    const btn = event.target;
+                    const originalText = btn.innerText;
+                    btn.innerText = t('copied');
+                    setTimeout(() => btn.innerText = originalText, 2000);
+                });
             }
         }
 
@@ -446,10 +491,9 @@
             tempCanvas.width = canvas.width; tempCanvas.height = canvas.height;
             tempCanvas.getContext('2d').putImageData(imgData, 0, 0);
 
-            // 如果检测到二维码，给出一个极小的“语义压缩”体积
             let lsfpBlob;
             if (hasQRCode) {
-                lsfpBlob = { size: 512 }; // 假装只有 512 字节
+                lsfpBlob = { size: 512 }; // 语义降维极小体积
             } else {
                 lsfpBlob = await LSFP.encode(imgData, { enableAdvanced: true });
             }
@@ -536,7 +580,7 @@
         }
 
         // ==========================================
-        // 5. 批量模式 (保持原样)
+        // 5. 批量模式
         // ==========================================
         async function handleBatchFiles(files) {
             dropZone.classList.add('has-image');
@@ -741,6 +785,8 @@
             originalSize = 0;
             currentFileName = 'image';
             isLsfpInput = false;
+            hasQRCode = false;
+            currentQRText = "";
         }
 
         function downloadBlob(blob, filename) {
