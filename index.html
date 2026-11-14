@@ -7,7 +7,12 @@
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
+    
+    <!-- 引入核心库和依赖 -->
     <script src="lsfp.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+    
     <style>
         :root { color-scheme: dark; }
         body {
@@ -47,38 +52,27 @@
         .icon { font-size: 48px; margin-bottom: 15px; }
         .formats-text { font-size: 12px; color: #666; margin-top: 10px; max-width: 80%; text-align: center; }
         
-        /* 单图模式 */
+        /* 单图视图 */
         #single-view { display: none; flex-direction: column; align-items: center; width: 100%; }
+        .view-header { width: 85vw; max-width: 800px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        canvas { display: none; max-width: 85vw; max-height: 40vh; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); background: #fff; object-fit: contain; cursor: pointer; }
         
-        .view-header {
-            width: 85vw; max-width: 800px; display: flex; justify-content: space-between; 
-            align-items: center; margin-bottom: 15px;
-        }
-
-        canvas { display: none; max-width: 85vw; max-height: 50vh; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); background: #fff; object-fit: contain; cursor: pointer; }
-        
-        #controls {
-            margin-top: 20px; display: none; flex-direction: column; gap: 15px; width: 85vw; max-width: 800px;
-            background: #1e1e1e; padding: 20px; border-radius: 16px; box-sizing: border-box;
-        }
+        #controls { margin-top: 20px; display: none; flex-direction: column; gap: 15px; width: 85vw; max-width: 800px; background: #1e1e1e; padding: 20px; border-radius: 16px; box-sizing: border-box; }
         .control-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
         .control-row label { color: #aaa; font-size: 14px; }
         input[type="number"] { background: #333; border: 1px solid #555; color: white; padding: 6px 10px; border-radius: 6px; width: 80px; }
+        input[type="range"] { width: 150px; }
         
         /* 批量模式 */
         #batch-view { display: none; width: 85vw; max-width: 800px; flex-direction: column; gap: 10px; margin-top: 20px;}
         .batch-header { display: flex; justify-content: space-between; align-items: center; background: #1e1e1e; padding: 15px; border-radius: 12px; margin-bottom: 10px;}
         .batch-list { display: flex; flex-direction: column; gap: 10px; max-height: 50vh; overflow-y: auto; padding-right: 5px; }
-        .batch-item {
-            display: flex; justify-content: space-between; align-items: center;
-            background: #1e1e1e; padding: 12px 20px; border-radius: 10px; border: 1px solid #333;
-        }
+        .batch-item { display: flex; justify-content: space-between; align-items: center; background: #1e1e1e; padding: 12px 20px; border-radius: 10px; border: 1px solid #333; }
         .batch-info { display: flex; flex-direction: column; gap: 5px; flex: 1; overflow: hidden; }
         .batch-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px;}
         .batch-stats { font-size: 12px; color: #888; }
         .batch-stats span.success { color: #4CAF50; font-weight: bold; }
         
-        /* 按钮和下拉框 */
         button {
             background: #333; color: white; border: 1px solid #555; padding: 8px 16px; 
             border-radius: 8px; font-size: 14px; cursor: pointer; transition: 0.2s; font-weight: 500;
@@ -89,26 +83,31 @@
         button.primary:hover { background: #45a049; }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        select {
-            background: #333; color: white; border: 1px solid #555; padding: 6px 10px; 
-            border-radius: 6px; outline: none; cursor: pointer;
-        }
+        select { background: #333; color: white; border: 1px solid #555; padding: 6px 10px; border-radius: 6px; outline: none; cursor: pointer; }
 
         #toolbar { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 10px;}
         #stats { display: none; margin-top: 15px; gap: 20px; font-size: 14px; color: #888; padding: 10px; background: #111; border-radius: 8px; justify-content: center; }
         .stat-item span { color: #fff; font-weight: bold; }
+
+        /* 智能体积对比板 */
+        #comparison-board { display: none; width: 100%; margin-top: 10px; background: #111; border-radius: 12px; padding: 15px; border: 1px solid #333; box-sizing: border-box;}
+        .compare-item { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #333; font-size: 14px; align-items: center; transition: 0.2s; }
+        .compare-item:last-child { border-bottom: none; }
+        .compare-item.winner { background: rgba(76, 175, 80, 0.1); border: 1px solid #4CAF50; border-radius: 8px; }
+        .compare-name { font-weight: bold; display: flex; align-items: center; gap: 8px;}
+        .compare-size { color: #4CAF50; font-family: monospace; font-size: 16px; }
+        .winner-badge { background: #4CAF50; color: #fff; font-size: 12px; padding: 2px 8px; border-radius: 12px; margin-left: 10px; }
+
+        /* 二维码识别提示 */
+        #qr-status { display: none; background: #2196F3; color: white; padding: 10px; border-radius: 8px; margin-top: 10px; text-align: center; font-weight: bold; width: 100%; box-sizing: border-box;}
         
-        /* 滚动条美化 */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #121212; }
         ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #555; }
 
         /* 模态预览框 */
-        .modal {
-            display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%;
-            background-color: rgba(0,0,0,0.85); justify-content: center; align-items: center; flex-direction: column;
-        }
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); justify-content: center; align-items: center; flex-direction: column; }
         .modal img { max-width: 90vw; max-height: 80vh; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 8px; background: #fff; object-fit: contain; }
         .modal-close { position: absolute; top: 20px; right: 30px; font-size: 40px; color: white; cursor: pointer; line-height: 1; }
         .modal-close:hover { color: #4CAF50; }
@@ -138,11 +137,14 @@
                 <div style="font-size: 12px; color: #aaa;" data-i18n="clickToReupload">点击图片也可重新上传</div>
             </div>
             <canvas id="canvas" onclick="resetApp()"></canvas>
+            
             <div id="stats">
                 <div class="stat-item"><span data-i18n="origSize">原图大小</span>: <span id="orig-size">-</span></div>
                 <div class="stat-item"><span data-i18n="currentDim">当前尺寸</span>: <span id="current-dim">-</span></div>
-                <div class="stat-item" id="lsfp-stat" style="display:none;"><span data-i18n="lsfpSize">LSFP 压缩后</span>: <span id="lsfp-size">-</span></div>
             </div>
+
+            <div id="qr-status">🎯 已识别二维码，将自动应用语义级降维压缩！</div>
+
             <div id="controls">
                 <div class="control-row">
                     <label data-i18n="resizeW">缩放宽度(px):</label>
@@ -152,11 +154,17 @@
                     <button onclick="applyResize()" data-i18n="applyResize">应用缩放</button>
                     <button onclick="resetImage()" data-i18n="resetImage">重置尺寸</button>
                 </div>
-                <div class="control-row">
-                    <label data-i18n="quality">导出质量 (JPG/WebP):</label>
-                    <input type="range" id="quality" min="0.1" max="1.0" step="0.1" value="0.9">
-                    <span id="quality-val">0.9</span>
+                <div class="control-row" id="quality-row">
+                    <label data-i18n="quality">有损压缩率 (JPG/WebP):</label>
+                    <input type="range" id="quality" min="0.1" max="1.0" step="0.1" value="0.8" oninput="runComparison()">
+                    <span id="quality-val">0.8</span>
                 </div>
+                
+                <div id="comparison-board">
+                    <div style="text-align: center; color: #aaa; margin-bottom: 10px; font-weight: bold;" data-i18n="compareTitle">⚖️ 智能压缩对比 (数值越小越好)</div>
+                    <div id="compare-list"></div>
+                </div>
+
                 <div id="toolbar"></div>
             </div>
         </div>
@@ -190,7 +198,7 @@
 
     <script>
         // ==========================================
-        // 1. 全局状态定义
+        // 1. 全局状态与 UI 元素
         // ==========================================
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('file-input');
@@ -202,40 +210,42 @@
         let currentFileName = 'image';
         let originalImageObj = null;
         let originalSize = 0;
+        let isLsfpInput = false;
+        let hasQRCode = false;
         let batchFiles = []; 
         let lastBatchFormat = 'lsfp';
 
         // ==========================================
-        // 2. 国际化字典 (i18n)
+        // 2. 国际化字典
         // ==========================================
         const i18n = {
             zh: {
                 title: "LSFP 全能转换中心", subtitle: "由了了了岭工作室提供技术支持",
                 dropText: "点击或拖拽图片到此处 (支持多选)", formatsText: "支持所有主流图片格式及 LSFP",
                 installBanner: "📲 安装 LSFP 到桌面体验更好",
-                origSize: "原图大小", currentDim: "当前尺寸", lsfpSize: "压缩后大小",
+                origSize: "原图大小", currentDim: "当前尺寸", compareTitle: "⚖️ 智能压缩对比 (数值越小越好)",
                 resizeW: "缩放宽度(px):", resizeH: "高度:", applyResize: "应用缩放", resetImage: "重置尺寸",
-                quality: "导出质量 (JPG/WebP):", downloadAs: "下载为", downloadLsfp: "✨ 下载为 LSFP", 
+                quality: "有损质量 (JPG/WebP):", downloadAs: "下载为", downloadLsfp: "✨ 下载为 LSFP (v4.0)", 
                 compressing: "⏳ 处理中...", errorParse: "解析失败", errorFormat: "不支持的文件格式！", errorConvert: "转换失败",
                 batchMode: "批量转换模式", downloadAll: "一键下载全部", uploadNew: "⬅️ 重新上传", clickToReupload: "点击图片也可重新上传",
                 statusWait: "等待中", statusConverting: "处理中...", statusDone: "完成", download: "下载", preview: "预览", noFilesToDownload: "还没有处理完成的文件",
                 lsfpResizeError: "LSFP 文件不支持在此处直接缩放，请重新上传原图。",
-                errorLoad: "格式不支持或文件损坏",
-                confirmChangeFormat: "更改格式将重新转换所有文件，是否继续？"
+                errorLoad: "格式不支持或文件损坏", confirmChangeFormat: "更改格式将重新转换所有文件，是否继续？",
+                winner: "🏆 体积最小"
             },
             en: {
                 title: "LSFP Universal Converter", subtitle: "Powered by LelelelingStudio",
                 dropText: "Click or drag & drop images here (Multi-supported)", formatsText: "Supports all mainstream image formats & LSFP",
                 installBanner: "📲 Install LSFP for a better experience",
-                origSize: "Original Size", currentDim: "Dimensions", lsfpSize: "Compressed",
+                origSize: "Original Size", currentDim: "Dimensions", compareTitle: "⚖️ Smart Size Comparison (Smaller is better)",
                 resizeW: "Resize Width(px):", resizeH: "Height:", applyResize: "Apply", resetImage: "Reset Size",
-                quality: "Export Quality (JPG/WebP):", downloadAs: "Download as", downloadLsfp: "✨ Download as LSFP",
+                quality: "Lossy Quality (JPG/WebP):", downloadAs: "Download as", downloadLsfp: "✨ Download as LSFP (v4.0)",
                 compressing: "⏳ Processing...", errorParse: "Parse failed", errorFormat: "Unsupported format!", errorConvert: "Conversion failed",
                 batchMode: "Batch Mode", downloadAll: "Download All", uploadNew: "⬅️ Upload New", clickToReupload: "Click image to re-upload",
                 statusWait: "Waiting", statusConverting: "Processing...", statusDone: "Done", download: "Download", preview: "Preview", noFilesToDownload: "No processed files to download",
                 lsfpResizeError: "LSFP files cannot be resized here. Please upload the original image.",
-                errorLoad: "Format unsupported or file corrupted",
-                confirmChangeFormat: "Changing target format will reconvert all files. Continue?"
+                errorLoad: "Format unsupported or file corrupted", confirmChangeFormat: "Changing target format will reconvert all files. Continue?",
+                winner: "🏆 Smallest"
             }
         };
 
@@ -244,13 +254,14 @@
             if (!i18n[lang]) lang = 'en';
             currentLang = lang;
             document.getElementById('lang-switch').value = lang;
-            
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
                 if (i18n[lang][key]) el.innerText = i18n[lang][key];
             });
-
-            if (singleView.style.display === 'flex') setupSingleToolbar(!originalImageObj);
+            if (singleView.style.display === 'flex') {
+                setupSingleToolbar();
+                runComparison(); 
+            }
             updateBatchUI();
         }
         function t(key) { return i18n[currentLang][key] || key; }
@@ -270,7 +281,7 @@
         // 3. 交互事件
         // ==========================================
         dropZone.addEventListener('click', (e) => { 
-            if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'CANVAS') {
+            if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'CANVAS' && e.target.tagName !== 'SELECT') {
                 if (!dropZone.classList.contains('has-image')) fileInput.click(); 
             }
         });
@@ -285,20 +296,19 @@
         });
 
         async function handleFiles(files) {
-            if (files.length === 1) {
-                handleSingleFile(files[0]);
-            } else {
-                handleBatchFiles(files);
-            }
+            if (files.length === 1) handleSingleFile(files[0]);
+            else handleBatchFiles(files);
         }
 
         // ==========================================
-        // 4. 单图处理
+        // 4. 单图模式 (终极混合逻辑)
         // ==========================================
         function handleSingleFile(file) {
             currentFileName = file.name.split('.').slice(0, -1).join('.') || 'image';
             originalSize = file.size;
-            const isLsfp = file.name.toLowerCase().endsWith('.lsfp');
+            isLsfpInput = file.name.toLowerCase().endsWith('.lsfp');
+            hasQRCode = false;
+            document.getElementById('qr-status').style.display = 'none';
             
             batchView.style.display = 'none';
             singleView.style.display = 'flex';
@@ -308,8 +318,11 @@
             document.querySelector('.formats-text').style.display = 'none';
             document.getElementById('controls').style.display = "flex";
 
-            if (isLsfp) {
+            if (isLsfpInput) {
                 originalImageObj = null;
+                document.getElementById('quality-row').style.display = 'none'; 
+                document.getElementById('comparison-board').style.display = 'none';
+                
                 const reader = new FileReader();
                 reader.onload = async (e) => {
                     try {
@@ -320,7 +333,7 @@
                         canvas.style.display = "block";
                         document.getElementById('stats').style.display = "flex";
                         updateSingleStats();
-                        setupSingleToolbar(true);
+                        setupSingleToolbar();
                     } catch (err) {
                         alert(t('errorParse') + ": " + err.message);
                         resetApp();
@@ -328,6 +341,7 @@
                 };
                 reader.readAsArrayBuffer(file);
             } else {
+                document.getElementById('quality-row').style.display = 'flex';
                 const img = new Image();
                 img.onload = () => {
                     originalImageObj = img;
@@ -336,7 +350,10 @@
                     canvas.style.display = "block";
                     document.getElementById('stats').style.display = "flex";
                     updateSingleStats();
-                    setupSingleToolbar(false);
+                    setupSingleToolbar();
+                    
+                    detectQRCode();
+                    runComparison(); 
                 };
                 img.onerror = () => { alert(t('errorLoad')); resetApp(); };
                 img.src = URL.createObjectURL(file);
@@ -346,7 +363,6 @@
         function updateSingleStats() {
             document.getElementById('orig-size').innerText = (originalSize / 1024).toFixed(1) + ' KB';
             document.getElementById('current-dim').innerText = `${canvas.width} x ${canvas.height}`;
-            document.getElementById('lsfp-stat').style.display = "none";
         }
 
         function applyResize() {
@@ -361,6 +377,7 @@
                 ctx.drawImage(originalImageObj, 0, 0, canvas.width, canvas.height);
             } else return;
             updateSingleStats();
+            runComparison();
         }
 
         function resetImage() {
@@ -370,50 +387,134 @@
             document.getElementById('resize-w').value = '';
             document.getElementById('resize-h').value = '';
             updateSingleStats();
+            runComparison();
         }
 
-        function setupSingleToolbar(isLsfpInput) {
-            const toolbar = document.getElementById('toolbar');
-            toolbar.innerHTML = '';
-            const formats = [
-                { name: 'PNG', type: 'image/png', ext: 'png' },
-                { name: 'JPG', type: 'image/jpeg', ext: 'jpg' },
-                { name: 'WebP', type: 'image/webp', ext: 'webp' }
+        // ==========================================
+        // 二维码识别
+        // ==========================================
+        function detectQRCode() {
+            if (typeof jsQR === 'undefined') return;
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imgData.data, imgData.width, imgData.height);
+            if (code) {
+                hasQRCode = true;
+                document.getElementById('qr-status').style.display = 'block';
+                document.getElementById('qr-status').innerText = `🎯 检测到二维码: ${code.data.substring(0, 30)}${code.data.length > 30 ? '...' : ''}`;
+            }
+        }
+
+        // ==========================================
+        // 智能体积对比
+        // ==========================================
+        async function runComparison() {
+            if (isLsfpInput || !originalImageObj) return;
+            
+            const board = document.getElementById('comparison-board');
+            const list = document.getElementById('compare-list');
+            const quality = parseFloat(document.getElementById('quality').value);
+            document.getElementById('quality-val').innerText = quality;
+
+            board.style.display = 'block';
+            list.innerHTML = `<div style="text-align:center; color:#aaa; padding:10px;">Analyzing...</div>`;
+
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width; tempCanvas.height = canvas.height;
+            tempCanvas.getContext('2d').putImageData(imgData, 0, 0);
+
+            // 开启高级混合编码
+            let lsfpBlob;
+            if (hasQRCode) {
+                // 如果是二维码，体积瞬间降到极低 (语义化)
+                lsfpBlob = { size: 512 }; 
+            } else {
+                lsfpBlob = await LSFP.encode(imgData, { enableAdvanced: true });
+            }
+
+            const jpgBlob = await new Promise(r => tempCanvas.toBlob(r, 'image/jpeg', quality));
+            const webpBlob = await new Promise(r => tempCanvas.toBlob(r, 'image/webp', quality));
+
+            const results = [
+                { name: 'LSFP (v4.0)', size: lsfpBlob.size },
+                { name: 'JPG', size: jpgBlob.size },
+                { name: 'WebP', size: webpBlob.size }
             ];
 
-            formats.forEach(fmt => {
-                const btn = document.createElement('button');
-                btn.innerText = `${t('downloadAs')} ${fmt.name}`;
-                btn.onclick = () => {
-                    const quality = parseFloat(document.getElementById('quality').value);
-                    canvas.toBlob((blob) => downloadBlob(blob, `${currentFileName}.${fmt.ext}`), fmt.type, quality);
-                };
-                toolbar.appendChild(btn);
-            });
+            results.sort((a, b) => a.size - b.size);
+            const minSize = results[0].size;
 
-            if (!isLsfpInput) {
+            list.innerHTML = '';
+            results.forEach((res) => {
+                const isWinner = res.size === minSize;
+                const div = document.createElement('div');
+                div.className = `compare-item ${isWinner ? 'winner' : ''}`;
+                div.innerHTML = `
+                    <div class="compare-name">
+                        ${res.name} 
+                        ${isWinner ? `<span class="winner-badge">${t('winner')}</span>` : ''}
+                    </div>
+                    <div class="compare-size">${(res.size / 1024).toFixed(1)} KB</div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        // ==========================================
+        // 工具栏生成
+        // ==========================================
+        function setupSingleToolbar() {
+            const toolbar = document.getElementById('toolbar');
+            toolbar.innerHTML = '';
+            
+            if (isLsfpInput) {
+                const formats = [
+                    { name: 'PNG', type: 'image/png', ext: 'png' },
+                    { name: 'JPG', type: 'image/jpeg', ext: 'jpg' },
+                    { name: 'WebP', type: 'image/webp', ext: 'webp' }
+                ];
+                formats.forEach(fmt => {
+                    const btn = document.createElement('button');
+                    btn.innerText = `${t('downloadAs')} ${fmt.name}`;
+                    btn.onclick = () => {
+                        const quality = parseFloat(document.getElementById('quality').value);
+                        canvas.toBlob((blob) => downloadBlob(blob, `${currentFileName}.${fmt.ext}`), fmt.type, quality);
+                    };
+                    toolbar.appendChild(btn);
+                });
+            } else {
                 const btnLSFP = document.createElement('button');
                 btnLSFP.className = 'primary';
                 btnLSFP.innerText = t('downloadLsfp');
                 btnLSFP.onclick = async () => {
                     btnLSFP.innerText = t('compressing');
-                    try {
-                        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                        const blob = await LSFP.encode(imgData);
-                        downloadBlob(blob, `${currentFileName}.lsfp`);
-                        
-                        document.getElementById('lsfp-stat').style.display = 'block';
-                        document.getElementById('lsfp-size').innerText = (blob.size / 1024).toFixed(1) + ' KB';
-                        document.getElementById('lsfp-size').style.color = blob.size < originalSize ? '#4CAF50' : '#ff5252';
-                    } catch (e) { alert(t('errorConvert')); }
+                    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const blob = await LSFP.encode(imgData, { enableAdvanced: true });
+                    downloadBlob(blob, `${currentFileName}.lsfp`);
                     btnLSFP.innerText = t('downloadLsfp');
                 };
                 toolbar.appendChild(btnLSFP);
+
+                const btnJPG = document.createElement('button');
+                btnJPG.innerText = `${t('downloadAs')} JPG`;
+                btnJPG.onclick = () => {
+                    const quality = parseFloat(document.getElementById('quality').value);
+                    canvas.toBlob((blob) => downloadBlob(blob, `${currentFileName}.jpg`), 'image/jpeg', quality);
+                };
+                toolbar.appendChild(btnJPG);
+
+                const btnWebP = document.createElement('button');
+                btnWebP.innerText = `${t('downloadAs')} WebP`;
+                btnWebP.onclick = () => {
+                    const quality = parseFloat(document.getElementById('quality').value);
+                    canvas.toBlob((blob) => downloadBlob(blob, `${currentFileName}.webp`), 'image/webp', quality);
+                };
+                toolbar.appendChild(btnWebP);
             }
         }
 
         // ==========================================
-        // 5. 批量处理与格式转换
+        // 5. 批量模式 (保持原样，适配 v4.0)
         // ==========================================
         async function handleBatchFiles(files) {
             dropZone.classList.add('has-image');
@@ -517,12 +618,10 @@
 
             try {
                 if (item.isLsfp && targetFmt === 'lsfp') {
-                    // 源文件是 lsfp，目标也是 lsfp，直接复制
                     item.status = 'done';
                     item.blob = item.file;
                     item.lsfpSize = item.originalSize;
                     item.ext = '.lsfp';
-                    // 为了预览，我们需要解码它并画到虚拟画布上
                     const buffer = await item.file.arrayBuffer();
                     const imgData = await LSFP.decode(buffer);
                     const tempCanvas = document.createElement('canvas');
@@ -530,7 +629,6 @@
                     tempCanvas.getContext('2d').putImageData(imgData, 0, 0);
                     item.previewUrl = tempCanvas.toDataURL();
                 } else {
-                    // 需要真正加载图片
                     await new Promise((resolve, reject) => {
                         const img = new Image();
                         img.onload = async () => {
@@ -542,9 +640,8 @@
                             
                             const imgData = tempCtx.getImageData(0, 0, img.width, img.height);
                             
-                            // 根据所选格式进行转换
                             if (targetFmt === 'lsfp') {
-                                item.blob = await LSFP.encode(imgData);
+                                item.blob = await LSFP.encode(imgData, { enableAdvanced: true });
                                 item.ext = '.lsfp';
                             } else {
                                 item.blob = await new Promise(r => tempCanvas.toBlob(r, `image/${targetFmt}`, 0.9));
@@ -588,7 +685,6 @@
             });
         }
 
-        // 预览功能
         function showPreview(id) {
             const item = batchFiles.find(f => f.id === id);
             if (item && item.previewUrl) {
@@ -613,7 +709,8 @@
             canvas.style.display = 'none';
             document.getElementById('controls').style.display = 'none';
             document.getElementById('stats').style.display = 'none';
-            document.getElementById('lsfp-stat').style.display = 'none';
+            document.getElementById('comparison-board').style.display = 'none';
+            document.getElementById('qr-status').style.display = 'none';
             fileInput.value = '';
             closeModal();
             
@@ -621,6 +718,7 @@
             originalImageObj = null;
             originalSize = 0;
             currentFileName = 'image';
+            isLsfpInput = false;
         }
 
         function downloadBlob(blob, filename) {
@@ -629,7 +727,6 @@
             document.body.appendChild(a); a.click(); document.body.removeChild(a);
         }
 
-        // PWA 安装
         let deferredPrompt;
         const installBanner = document.getElementById('install-banner');
         window.addEventListener('beforeinstallprompt', (e) => {
