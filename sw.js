@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lsfp-v11';
+const CACHE_NAME = 'lsfp-v13'; // 升级版本号
 const ASSETS = [
   './',
   './index.html',
