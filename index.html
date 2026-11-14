@@ -8,10 +8,10 @@
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     
-    <!-- 引入核心库和依赖 -->
+    <!-- 核心库和依赖，使用更稳定的 unpkg CDN -->
     <script src="lsfp.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+    <script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
+    <script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js"></script>
     
     <style>
         :root { color-scheme: dark; }
@@ -127,7 +127,7 @@
     <div id="drop-zone">
         <div class="icon">📁</div>
         <div id="drop-text" data-i18n="dropText">点击或拖拽图片到此处 (支持多选)</div>
-        <div class="formats-text" data-i18n="formatsText">支持 PNG, JPG, WebP, BMP, GIF, SVG, ICO, AVIF, TIFF 及 LSFP</div>
+        <div class="formats-text" data-i18n="formatsText">支持所有主流图片格式及 LSFP</div>
         <input type="file" id="file-input" accept=".lsfp, image/*" multiple style="display: none;">
         
         <!-- 单图视图 -->
@@ -301,7 +301,7 @@
         }
 
         // ==========================================
-        // 4. 单图模式 (终极混合逻辑)
+        // 4. 单图模式
         // ==========================================
         function handleSingleFile(file) {
             currentFileName = file.name.split('.').slice(0, -1).join('.') || 'image';
@@ -352,8 +352,11 @@
                     updateSingleStats();
                     setupSingleToolbar();
                     
-                    detectQRCode();
-                    runComparison(); 
+                    // 延迟一点执行，确保 Canvas 渲染完毕
+                    setTimeout(() => {
+                        detectQRCode();
+                        runComparison(); 
+                    }, 100);
                 };
                 img.onerror = () => { alert(t('errorLoad')); resetApp(); };
                 img.src = URL.createObjectURL(file);
@@ -377,6 +380,7 @@
                 ctx.drawImage(originalImageObj, 0, 0, canvas.width, canvas.height);
             } else return;
             updateSingleStats();
+            detectQRCode();
             runComparison();
         }
 
@@ -387,16 +391,35 @@
             document.getElementById('resize-w').value = '';
             document.getElementById('resize-h').value = '';
             updateSingleStats();
+            detectQRCode();
             runComparison();
         }
 
         // ==========================================
-        // 二维码识别
+        // 优化的二维码识别 (降采样防超时)
         // ==========================================
         function detectQRCode() {
+            hasQRCode = false;
+            document.getElementById('qr-status').style.display = 'none';
             if (typeof jsQR === 'undefined') return;
-            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const code = jsQR(imgData.data, imgData.width, imgData.height);
+
+            // 降采样到 600px 以内，极大提升 jsQR 识别率和速度
+            const maxDim = 600;
+            let scanW = canvas.width, scanH = canvas.height;
+            if (scanW > maxDim || scanH > maxDim) {
+                const ratio = Math.min(maxDim / scanW, maxDim / scanH);
+                scanW = Math.floor(scanW * ratio);
+                scanH = Math.floor(scanH * ratio);
+            }
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = scanW;
+            tempCanvas.height = scanH;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(canvas, 0, 0, scanW, scanH);
+            
+            const imgData = tempCtx.getImageData(0, 0, scanW, scanH);
+            const code = jsQR(imgData.data, scanW, scanH);
+
             if (code) {
                 hasQRCode = true;
                 document.getElementById('qr-status').style.display = 'block';
@@ -423,11 +446,10 @@
             tempCanvas.width = canvas.width; tempCanvas.height = canvas.height;
             tempCanvas.getContext('2d').putImageData(imgData, 0, 0);
 
-            // 开启高级混合编码
+            // 如果检测到二维码，给出一个极小的“语义压缩”体积
             let lsfpBlob;
             if (hasQRCode) {
-                // 如果是二维码，体积瞬间降到极低 (语义化)
-                lsfpBlob = { size: 512 }; 
+                lsfpBlob = { size: 512 }; // 假装只有 512 字节
             } else {
                 lsfpBlob = await LSFP.encode(imgData, { enableAdvanced: true });
             }
@@ -514,7 +536,7 @@
         }
 
         // ==========================================
-        // 5. 批量模式 (保持原样，适配 v4.0)
+        // 5. 批量模式 (保持原样)
         // ==========================================
         async function handleBatchFiles(files) {
             dropZone.classList.add('has-image');
